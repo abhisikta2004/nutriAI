@@ -61,26 +61,39 @@ export function calculateBasicHealthScore(nutriments: any, targetBodyType: strin
   const fat = toNumber(nutriments.fat_100g ?? nutriments.fat, 0);
   const saturatedFat = toNumber(nutriments['saturated-fat_100g'] ?? nutriments.saturatedFat, 0);
   const sugar = toNumber(nutriments.sugars_100g ?? nutriments.sugar, 0);
+  const processingLevel = toNumber(nutriments.processingLevel, 0.3);
   
   // Note: Open Food Facts sodium_100g is in grams; if < 20 and > 0, convert to mg. Otherwise assume mg.
   const rawSodium = toNumber(nutriments.sodium_100g ?? nutriments.sodium, 0);
   const sodium = rawSodium < 20 && rawSodium > 0 ? rawSodium * 1000 : rawSodium;
   
   const mult = getGoalMultipliers(targetBodyType);
-  let score = 50;
+  let score = 55;
   
-  // Positive factors (adjusted by goal multipliers)
-  if (protein > 10) score += 15 * mult[1];
-  if (fiber > 5) score += 15 * mult[6];
+  // Positive factors (proportional, continuous benefits)
+  score += Math.min(25, protein * 1.5) * mult[1]; // Protein bonus up to +25
+  score += Math.min(20, fiber * 2.5) * mult[6];   // Fiber bonus up to +20
+
+  // Low processing & whole food bonus
+  if (processingLevel <= 0.3) {
+    score += 15 * mult[8];
+  } else if (processingLevel > 0.6) {
+    score -= 15 * mult[8];
+  }
+
+  // Low calorie & low sugar profile bonus (fresh fruits/vegetables/smoothies)
+  if (calories < 120 && sugar < 12 && saturatedFat < 1) {
+    score += 12;
+  }
   
-  // Negative factors (adjusted by goal multipliers)
-  if (calories > 400) score -= 15 * mult[0];
-  if (fat > 20) score -= 10 * mult[3];
-  if (saturatedFat > 10) score -= 10 * mult[4];
-  if (sugar > 20) score -= 15 * mult[5];
-  if (sodium > 500) score -= 10 * mult[7];
+  // Negative factors (proportional penalties)
+  if (calories > 350) score -= Math.min(25, ((calories - 350) / 15)) * mult[0];
+  if (fat > 15) score -= Math.min(20, ((fat - 15) * 1.0)) * mult[3];
+  if (saturatedFat > 3) score -= Math.min(20, ((saturatedFat - 3) * 2.0)) * mult[4];
+  if (sugar > 12) score -= Math.min(25, ((sugar - 12) * 1.0)) * mult[5];
+  if (sodium > 300) score -= Math.min(15, ((sodium - 300) / 50)) * mult[7];
   
-  return Math.max(0, Math.min(100, score));
+  return Math.max(5, Math.min(98, Math.round(score)));
 }
 
 // Calculate health score using trained ML model or fallback with goal-specific weighting
