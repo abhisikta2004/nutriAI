@@ -32,13 +32,9 @@ interface AppleHealthContextType {
 }
 
 const DEFAULT_ACTIVITY: AppleHealthActivity = {
-  activeEnergyBurned: 240, // 240/500 kcal Move partial ring progress initially
+  activeEnergyBurned: 0, // 0 kcal Move initially (0% Move Ring)
   basalEnergyBurned: 1680,
-  stepCount: 4150,
-  exerciseMinutes: 20,
-  flightsClimbed: 4,
-  restingHeartRate: 64,
-  bodyWeight: 70,
+  stepCount: 0,          // 0 steps initially (0% Steps)
   lastSyncedAt: new Date().toISOString(),
 };
 
@@ -46,7 +42,7 @@ const DEFAULT_SYNC_STATE: AppleHealthSyncState = {
   isConnected: true,
   isAutoSyncEnabled: true,
   activity: DEFAULT_ACTIVITY,
-  loggedMeals: [], // Starts clean: 0 meals logged initially
+  loggedMeals: [], // Starts clean: 0 meals logged initially (0% Intake & Protein Rings)
   syncMethod: "manual"
 };
 
@@ -56,7 +52,7 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
   const { profile } = useUserProfile();
   const [syncState, setSyncState] = useState<AppleHealthSyncState>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("nutriai_apple_health_sync");
+      const saved = localStorage.getItem("nutriai_apple_health_sync_v2");
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -71,9 +67,40 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
   // Save to localStorage on state changes
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("nutriai_apple_health_sync", JSON.stringify(syncState));
+      localStorage.setItem("nutriai_apple_health_sync_v2", JSON.stringify(syncState));
     }
   }, [syncState]);
+
+  // Listen for iOS Shortcut 1-Tap URL Query Parameters Sync (e.g. ?health_sync=1&kcal=520&steps=8500)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const isSync = params.get("health_sync") || params.get("apple_health_sync") || params.get("move") || params.get("kcal");
+
+      if (isSync) {
+        const move = Number(params.get("kcal") || params.get("move") || params.get("activeBurn") || params.get("activeEnergy") || 0);
+        const steps = Number(params.get("steps") || params.get("stepCount") || 0);
+
+        if (move > 0 || steps > 0) {
+          syncActivityData({
+            activeEnergyBurned: move,
+            stepCount: steps,
+          }, "shortcut");
+
+          toast.success("Apple Health synced via iOS Shortcut! 🍎", {
+            description: `Active Calories: ${move} kcal • Steps: ${steps.toLocaleString()}`
+          });
+
+          // Clean up URL parameters cleanly without reloading
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    } catch (e) {
+      console.warn("Shortcut URL parse error:", e);
+    }
+  }, []);
 
   // Compute Daily Targets and Consumed Totals calibrated to Apple Health + Body Goal Transition
   const weight = profile.weight || 70;
@@ -210,10 +237,12 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
         const parsed = JSON.parse(fileContent);
         const activity: Partial<AppleHealthActivity> = {};
         
-        if (parsed.activeEnergyBurned || parsed.activeCalories) activity.activeEnergyBurned = Number(parsed.activeEnergyBurned || parsed.activeCalories);
-        if (parsed.stepCount || parsed.steps) activity.stepCount = Number(parsed.stepCount || parsed.steps);
-        if (parsed.restingHeartRate || parsed.heartRate) activity.restingHeartRate = Number(parsed.restingHeartRate || parsed.heartRate);
-        if (parsed.bodyWeight || parsed.weight) activity.bodyWeight = Number(parsed.bodyWeight || parsed.weight);
+        if (parsed.activeEnergyBurned || parsed.activeCalories || parsed.kcal || parsed.caloriesBurned) {
+          activity.activeEnergyBurned = Number(parsed.activeEnergyBurned || parsed.activeCalories || parsed.kcal || parsed.caloriesBurned);
+        }
+        if (parsed.stepCount || parsed.steps) {
+          activity.stepCount = Number(parsed.stepCount || parsed.steps);
+        }
 
         syncActivityData(activity, "file");
         return true;
@@ -223,7 +252,6 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
       if (fileContent.includes("<HealthData") || fileContent.includes("<Record")) {
         const stepMatch = fileContent.match(/type="HKQuantityTypeIdentifierStepCount"[^>]*value="([0-9.]+)"/g);
         const energyMatch = fileContent.match(/type="HKQuantityTypeIdentifierActiveEnergyBurned"[^>]*value="([0-9.]+)"/g);
-        const weightMatch = fileContent.match(/type="HKQuantityTypeIdentifierBodyMass"[^>]*value="([0-9.]+)"/g);
 
         let totalSteps = 0;
         if (stepMatch) {
@@ -241,12 +269,9 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
-        const latestWeight = weightMatch ? parseFloat(weightMatch[weightMatch.length - 1].match(/value="([0-9.]+)"/)?.[1] || "70") : 70;
-
         syncActivityData({
-          activeEnergyBurned: Math.max(300, Math.round(totalActiveEnergy || 540)),
-          stepCount: Math.max(2000, Math.round(totalSteps || 7800)),
-          bodyWeight: Math.round(latestWeight * 10) / 10,
+          activeEnergyBurned: Math.round(totalActiveEnergy || 0),
+          stepCount: Math.round(totalSteps || 0),
         }, "file");
         return true;
       }

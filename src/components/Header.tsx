@@ -15,7 +15,7 @@ const Header = () => {
     await resetProfile();
   };
 
-  const activeBurn = syncState.activity.activeEnergyBurned || 240;
+  const activeBurn = syncState.activity.activeEnergyBurned || 0;
 
   return (
     <>

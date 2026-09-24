@@ -14,16 +14,12 @@ import { Card } from "@/components/ui/card";
 import { 
   Flame, 
   Footprints, 
-  Heart, 
   Activity, 
   Upload, 
   Download, 
   Smartphone, 
-  ShieldCheck, 
   RefreshCw, 
   Sparkles, 
-  CheckCircle2, 
-  Layers, 
   Clock,
   Zap,
   Info
@@ -51,18 +47,14 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
   } = useAppleHealth();
   const { profile } = useUserProfile();
 
-  const [activeBurnInput, setActiveBurnInput] = useState<number>(syncState.activity.activeEnergyBurned || 240);
-  const [stepsInput, setStepsInput] = useState<number>(syncState.activity.stepCount || 4150);
-  const [heartRateInput, setHeartRateInput] = useState<number>(syncState.activity.restingHeartRate || 64);
-  const [weightInput, setWeightInput] = useState<number>(profile.weight || 70);
+  const [activeBurnInput, setActiveBurnInput] = useState<number>(syncState.activity.activeEnergyBurned || 0);
+  const [stepsInput, setStepsInput] = useState<number>(syncState.activity.stepCount || 0);
   const [isImporting, setIsImporting] = useState(false);
 
   const handleManualSync = () => {
     syncActivityData({
       activeEnergyBurned: activeBurnInput,
       stepCount: stepsInput,
-      restingHeartRate: heartRateInput,
-      bodyWeight: weightInput
     }, "manual");
   };
 
@@ -87,10 +79,22 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
   };
 
   const copyShortcutLink = () => {
-    const link = generateShortcutLink();
-    navigator.clipboard.writeText(link);
-    toast.success("Apple Health Shortcut URL copied to clipboard!", {
-      description: "Paste in Safari or Shortcuts app to sync automatically."
+    const url = `${window.location.origin}/?health_sync=1&kcal=500&steps=10000`;
+    navigator.clipboard.writeText(url);
+    toast.success("iOS Shortcut Sync URL copied to clipboard!", {
+      description: "Format: /?health_sync=1&kcal={Active_Calories}&steps={Step_Count}"
+    });
+  };
+
+  const handleSimulateShortcutSync = (kcal: number, steps: number) => {
+    syncActivityData({
+      activeEnergyBurned: kcal,
+      stepCount: steps,
+    }, "shortcut");
+    setActiveBurnInput(kcal);
+    setStepsInput(steps);
+    toast.success("Simulated iOS Shortcut Sync! 🍎", {
+      description: `Active Calories: ${kcal} kcal • Steps: ${steps.toLocaleString()} synced.`
     });
   };
 
@@ -106,7 +110,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                   Apple Health & HealthKit Sync
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  Two-way activity ingestion, live calorie burn calibration, and HealthKit meal logging.
+                  Active calories (Move) and daily steps sync with dynamic ring closing.
                 </DialogDescription>
               </div>
             </div>
@@ -147,7 +151,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                 <div>
                   <h4 className="text-base font-bold text-foreground">Today's HealthKit Activity</h4>
                   <p className="text-xs text-muted-foreground">
-                    Last synced: {new Date(syncState.activity.lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    Last synced: {lastSyncedText}
                   </p>
                 </div>
 
@@ -190,17 +194,17 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
               <Card className="p-3.5 space-y-1 bg-card/60">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Footprints className="h-3.5 w-3.5 text-amber-500" />
-                  <span>Steps</span>
+                  <span>Daily Steps</span>
                 </div>
                 <p className="text-lg font-bold text-foreground">{syncState.activity.stepCount.toLocaleString()}</p>
               </Card>
 
               <Card className="p-3.5 space-y-1 bg-card/60">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Heart className="h-3.5 w-3.5 text-pink-500" />
-                  <span>Heart Rate</span>
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Intake</span>
                 </div>
-                <p className="text-lg font-bold text-foreground">{syncState.activity.restingHeartRate || 64} bpm</p>
+                <p className="text-lg font-bold text-foreground">{summary.totalCaloriesConsumed} kcal</p>
               </Card>
 
               <Card className="p-3.5 space-y-1 bg-card/60">
@@ -219,7 +223,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                 <span>How Apple Health Calibrates Your Target Budget:</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Base BMR ({1680} kcal) + Apple Health Workout Burn ({syncState.activity.activeEnergyBurned} kcal) = Total Energy Expenditure ({1680 + syncState.activity.activeEnergyBurned} kcal). 
+                Base BMR ({1680} kcal) + Apple Health Active Burn ({syncState.activity.activeEnergyBurned} kcal) = Total Energy Expenditure ({1680 + syncState.activity.activeEnergyBurned} kcal). 
                 Adjusted for your <strong>{profile.targetBodyType?.toUpperCase()}</strong> goal $\implies$ <strong>{summary.dailyTargetCalories} kcal daily target</strong>.
               </p>
             </div>
@@ -235,17 +239,33 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Option 1: 1-Tap iOS Shortcut Bridge</h4>
-                  <p className="text-xs text-muted-foreground">Sync your Apple Watch & iPhone HealthKit data in 1 second.</p>
+                  <p className="text-xs text-muted-foreground">Sync your Apple Watch & iPhone HealthKit data (Steps & Active Calories).</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              {/* Step-by-step setup explanation */}
+              <div className="bg-muted/30 p-3 rounded-lg border border-border/40 text-xs space-y-1.5 text-muted-foreground">
+                <p className="font-semibold text-foreground">How the iOS Shortcut works:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>In the iOS <strong>Shortcuts</strong> app, add action <strong>Find Health Samples</strong> (Active Energy Burned today, Sum).</li>
+                  <li>Add action <strong>Find Health Samples</strong> (Step Count today, Sum).</li>
+                  <li>Add action <strong>Open URL</strong> with <code className="px-1 py-0.5 rounded bg-muted text-primary text-[11px] font-mono">{`https://<YOUR_APP_URL>/?health_sync=1&kcal=[Active Energy]&steps=[Step Count]`}</code></li>
+                </ol>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <Button size="sm" onClick={copyShortcutLink} className="text-xs font-semibold flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5" />
-                  Get Apple Health Shortcut
+                  Copy Shortcut URL Template
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => window.open(generateShortcutLink(), "_blank")} className="text-xs">
-                  Open Shortcut
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => handleSimulateShortcutSync(480, 8200)} 
+                  className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Test Sync (480 kcal, 8,200 steps)
                 </Button>
               </div>
             </Card>
@@ -258,7 +278,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Option 2: Import Apple Health Export File</h4>
-                  <p className="text-xs text-muted-foreground">Upload your exported export.xml or metrics.json file from the Health app.</p>
+                  <p className="text-xs text-muted-foreground">Upload your export.xml or metrics.json from the Health app.</p>
                 </div>
               </div>
 
@@ -282,7 +302,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-foreground">Option 3: Quick Biometric Sync</h4>
-                    <p className="text-xs text-muted-foreground">Adjust live metrics matching your Apple Watch readings.</p>
+                    <p className="text-xs text-muted-foreground">Adjust Active Calories (kcal) and Steps matching Apple Health.</p>
                   </div>
                 </div>
                 <Button size="sm" onClick={handleManualSync} className="text-xs font-bold bg-primary text-primary-foreground">
@@ -297,7 +317,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                     <strong className="text-red-500 font-bold">{activeBurnInput} kcal</strong>
                   </div>
                   <Slider 
-                    min={100} 
+                    min={0} 
                     max={1500} 
                     step={10} 
                     value={[activeBurnInput]} 
@@ -311,39 +331,11 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                     <strong className="text-amber-500 font-bold">{stepsInput.toLocaleString()} steps</strong>
                   </div>
                   <Slider 
-                    min={1000} 
+                    min={0} 
                     max={30000} 
                     step={100} 
                     value={[stepsInput]} 
                     onValueChange={(val) => setStepsInput(val[0])} 
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Resting Heart Rate:</span>
-                    <strong className="text-pink-500 font-bold">{heartRateInput} bpm</strong>
-                  </div>
-                  <Slider 
-                    min={45} 
-                    max={110} 
-                    step={1} 
-                    value={[heartRateInput]} 
-                    onValueChange={(val) => setHeartRateInput(val[0])} 
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Body Weight:</span>
-                    <strong className="text-emerald-500 font-bold">{weightInput} kg</strong>
-                  </div>
-                  <Slider 
-                    min={40} 
-                    max={150} 
-                    step={0.5} 
-                    value={[weightInput]} 
-                    onValueChange={(val) => setWeightInput(val[0])} 
                   />
                 </div>
               </div>

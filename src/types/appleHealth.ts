@@ -1,11 +1,7 @@
 export interface AppleHealthActivity {
   activeEnergyBurned: number; // in kcal (Move Ring)
   basalEnergyBurned: number;  // in kcal (BMR)
-  stepCount: number;
-  flightsClimbed?: number;
-  exerciseMinutes?: number;
-  restingHeartRate?: number;
-  bodyWeight?: number;        // in kg
+  stepCount: number;          // Daily Steps
   lastSyncedAt: string;
 }
 

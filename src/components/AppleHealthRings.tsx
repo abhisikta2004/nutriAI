@@ -26,19 +26,19 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
   // Outer Ring: Move (Active Energy Burned) - Red / Coral
   const radius1 = center - strokeWidth / 2 - 4;
   const circ1 = 2 * Math.PI * radius1;
-  const pct1 = Math.min(1.5, Math.max(0.01, moveTarget > 0 ? moveValue / moveTarget : 0));
+  const pct1 = moveTarget > 0 && moveValue > 0 ? Math.min(1.5, moveValue / moveTarget) : 0;
   const offset1 = circ1 - Math.min(1, pct1) * circ1;
 
   // Middle Ring: Intake (Consumed Calories) - Orange / Amber
   const radius2 = radius1 - strokeWidth - gap;
   const circ2 = 2 * Math.PI * radius2;
-  const pct2 = Math.min(1.5, Math.max(0.01, intakeTarget > 0 ? intakeValue / intakeTarget : 0));
+  const pct2 = intakeTarget > 0 && intakeValue > 0 ? Math.min(1.5, intakeValue / intakeTarget) : 0;
   const offset2 = circ2 - Math.min(1, pct2) * circ2;
 
   // Inner Ring: Protein Target - Emerald / Green
   const radius3 = radius2 - strokeWidth - gap;
   const circ3 = 2 * Math.PI * radius3;
-  const pct3 = Math.min(1.5, Math.max(0.01, proteinTarget > 0 ? proteinValue / proteinTarget : 0));
+  const pct3 = proteinTarget > 0 && proteinValue > 0 ? Math.min(1.5, proteinValue / proteinTarget) : 0;
   const offset3 = circ3 - Math.min(1, pct3) * circ3;
 
   return (
@@ -75,18 +75,20 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           strokeWidth={strokeWidth}
         />
         {/* Outer Ring Progress (Move) */}
-        <circle
-          cx={center}
-          cy={center}
-          r={radius1}
-          fill="none"
-          stroke="url(#ringMoveGrad)"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circ1}
-          strokeDashoffset={offset1}
-          strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
-        />
+        {pct1 > 0 && (
+          <circle
+            cx={center}
+            cy={center}
+            r={radius1}
+            fill="none"
+            stroke="url(#ringMoveGrad)"
+            strokeWidth={strokeWidth}
+            strokeDasharray={circ1}
+            strokeDashoffset={offset1}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
+          />
+        )}
 
         {/* Middle Ring Background (Intake) */}
         <circle
@@ -99,18 +101,20 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           strokeWidth={strokeWidth}
         />
         {/* Middle Ring Progress (Intake) */}
-        <circle
-          cx={center}
-          cy={center}
-          r={radius2}
-          fill="none"
-          stroke="url(#ringIntakeGrad)"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circ2}
-          strokeDashoffset={offset2}
-          strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
-        />
+        {pct2 > 0 && (
+          <circle
+            cx={center}
+            cy={center}
+            r={radius2}
+            fill="none"
+            stroke="url(#ringIntakeGrad)"
+            strokeWidth={strokeWidth}
+            strokeDasharray={circ2}
+            strokeDashoffset={offset2}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
+          />
+        )}
 
         {/* Inner Ring Background (Protein) */}
         <circle
@@ -123,18 +127,20 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           strokeWidth={strokeWidth}
         />
         {/* Inner Ring Progress (Protein) */}
-        <circle
-          cx={center}
-          cy={center}
-          r={radius3}
-          fill="none"
-          stroke="url(#ringProteinGrad)"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circ3}
-          strokeDashoffset={offset3}
-          strokeLinecap="round"
-          className="transition-all duration-1000 ease-out"
-        />
+        {pct3 > 0 && (
+          <circle
+            cx={center}
+            cy={center}
+            r={radius3}
+            fill="none"
+            stroke="url(#ringProteinGrad)"
+            strokeWidth={strokeWidth}
+            strokeDasharray={circ3}
+            strokeDashoffset={offset3}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out"
+          />
+        )}
       </svg>
 
       {/* Center Apple Icon / Calorie Badge */}

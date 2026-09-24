@@ -6,14 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Flame, 
   Footprints, 
-  Heart, 
   Activity, 
-  RefreshCw, 
   ArrowUpRight, 
-  Clock, 
-  PlusCircle, 
-  Smartphone,
-  ExternalLink
+  Clock
 } from "lucide-react";
 import { useAppleHealth } from "@/contexts/AppleHealthContext";
 import { AppleHealthRings } from "./AppleHealthRings";
@@ -25,7 +20,6 @@ export const AppleHealthCard: React.FC = () => {
 
   const activeBurn = syncState.activity.activeEnergyBurned || 0;
   const steps = syncState.activity.stepCount || 0;
-  const heartRate = syncState.activity.restingHeartRate || 64;
   
   const targetCals = summary.dailyTargetCalories || 2000;
   const consumedCals = summary.totalCaloriesConsumed || 0;
@@ -69,7 +63,7 @@ export const AppleHealthCard: React.FC = () => {
                 Move: {summary.moveProgress}% • Intake: {summary.intakeProgress}% • Protein: {summary.proteinProgress}%
               </p>
 
-              {/* Quick Metrics Badges */}
+              {/* Quick Metrics Badges - Steps & Kcal */}
               <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-medium">
                 <div className="flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md">
                   <Flame className="h-3.5 w-3.5 shrink-0" />
@@ -78,10 +72,6 @@ export const AppleHealthCard: React.FC = () => {
                 <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
                   <Footprints className="h-3.5 w-3.5 shrink-0" />
                   <span>{steps.toLocaleString()} steps</span>
-                </div>
-                <div className="flex items-center gap-1 text-pink-600 dark:text-pink-400 bg-pink-500/10 px-2 py-0.5 rounded-md">
-                  <Heart className="h-3.5 w-3.5 shrink-0" />
-                  <span>{heartRate} bpm</span>
                 </div>
               </div>
             </div>
