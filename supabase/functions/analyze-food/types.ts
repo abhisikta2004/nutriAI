@@ -87,6 +87,7 @@ export interface IdentifiedFood {
 export interface AnalyzeResponse {
   identifiedFood: string;
   confidence: number;
+  healthScore?: number;
   nutritionInfo: {
     calories: number;
     protein: number;

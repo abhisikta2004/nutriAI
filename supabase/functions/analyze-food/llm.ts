@@ -65,16 +65,16 @@ Return ONLY this JSON structure:
 
 /**
  * Call vision LLM to identify food and extract base nutritional values.
- * Supports Google Gemini native REST API (primary) with OpenAI-compatible gateway fallback.
+ * Uses Google Gemini native REST API (primary) and Gemini OpenAI-compatible REST API (fallback).
  */
 export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood> {
-  const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('LOVABLE_API_KEY');
+  const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_API_KEY');
 
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
   }
 
-  console.log('Analyzing food image with AI for identification...');
+  console.log('Analyzing food image with Gemini AI for identification...');
 
   // Robust base64 data and mime-type extraction without slow/brittle regex
   let mimeType = 'image/jpeg';
@@ -101,153 +101,161 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
   base64Data = base64Data.replace(/\s+/g, '');
 
   let contentText = '';
-
-  // 1. Primary: Direct Google Gemini API (generateContent)
   let geminiSuccess = false;
   const errorLogs: string[] = [];
 
-  if (!apiKey.startsWith('sk_')) {
-    // Dynamically discover all active models supporting generateContent on this API key
-    let models = ['gemini-3.6-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-2.0-flash-lite-preview'];
-    try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        if (listData.models && Array.isArray(listData.models)) {
-          const discovered = listData.models
-            .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-            .map((m: any) => m.name.replace(/^models\//, ''))
-            .filter((name: string) => name.includes('flash') || name.includes('pro') || name.includes('gemini'));
-          if (discovered.length > 0) {
-            // Prioritize flash models, then pro models
-            discovered.sort((a: string, b: string) => {
-              if (a.includes('3.6') && !b.includes('3.6')) return -1;
-              if (!a.includes('3.6') && b.includes('3.6')) return 1;
-              if (a.includes('flash') && !b.includes('flash')) return -1;
-              if (!a.includes('flash') && b.includes('flash')) return 1;
-              return 0;
-            });
-            models = discovered;
-            console.log('Discovered active Gemini models for this key:', models);
-          }
+  // 1. Primary: Direct Google Gemini API (generateContent)
+  // Dynamically discover all active models supporting generateContent on this API key
+  let models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-2.0-flash-lite-preview'];
+  try {
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      if (listData.models && Array.isArray(listData.models)) {
+        const discovered = listData.models
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name.replace(/^models\//, ''))
+          .filter((name: string) => name.includes('flash') || name.includes('pro') || name.includes('gemini'));
+        if (discovered.length > 0) {
+          // Prioritize flash models, then pro models
+          discovered.sort((a: string, b: string) => {
+            if (a.includes('3.6') && !b.includes('3.6')) return -1;
+            if (!a.includes('3.6') && b.includes('3.6')) return 1;
+            if (a.includes('2.5') && !b.includes('2.5')) return -1;
+            if (!a.includes('2.5') && b.includes('2.5')) return 1;
+            if (a.includes('flash') && !b.includes('flash')) return -1;
+            if (!a.includes('flash') && b.includes('flash')) return 1;
+            return 0;
+          });
+          models = discovered;
+          console.log('Discovered active Gemini models for this key:', models);
         }
       }
-    } catch (e) {
-      console.warn('Could not query model list, using fallback candidate list:', e);
     }
+  } catch (e) {
+    console.warn('Could not query model list, using fallback candidate list:', e);
+  }
 
-    for (const model of models) {
-      // Retry up to 2 times on transient 503 errors with backoff
-      const maxRetries = 1;
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    { text: `${SYSTEM_INSTRUCTION}\n\nIdentify this food and provide accurate nutritional values per 100g.` },
-                    {
-                      inlineData: {
-                        mimeType: mimeType,
-                        data: base64Data
-                      }
+  for (const model of models) {
+    // Retry up to 1 time on transient 503/500 errors with backoff
+    const maxRetries = 1;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: `${SYSTEM_INSTRUCTION}\n\nIdentify this food and provide accurate nutritional values per 100g.` },
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Data
                     }
-                  ]
-                }
-              ],
-              generationConfig: {
-                temperature: 0.2,
-                responseMimeType: "application/json",
-                maxOutputTokens: 800
+                  }
+                ]
               }
-            })
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-            if (contentText) {
-              geminiSuccess = true;
-              console.log(`Successfully identified food using ${model} (attempt ${attempt + 1})`);
-              break;
-            } else {
-              errorLogs.push(`${model}: empty candidates in response`);
+            ],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: "application/json",
+              maxOutputTokens: 800
             }
-          } else {
-            const errBody = await response.text().catch(() => '');
-            const isTransient = response.status === 503 || response.status === 500;
-            
-            if (isTransient && attempt < maxRetries) {
-              const backoff = 800 * (attempt + 1);
-              console.warn(`Gemini ${model} returned ${response.status} (attempt ${attempt + 1}), retrying in ${backoff}ms...`);
-              await new Promise(r => setTimeout(r, backoff));
-              continue;
-            }
+          })
+        });
 
-            errorLogs.push(`${model} (${response.status}): ${errBody.slice(0, 150)}`);
-            console.warn(`Gemini ${model} returned ${response.status}`);
+        if (response.ok) {
+          const result = await response.json();
+          contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+          if (contentText) {
+            geminiSuccess = true;
+            console.log(`Successfully identified food using ${model} (attempt ${attempt + 1})`);
             break;
+          } else {
+            errorLogs.push(`${model}: empty candidates in response`);
           }
-        } catch (err: any) {
-          if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+        } else {
+          const errBody = await response.text().catch(() => '');
+          const isTransient = response.status === 503 || response.status === 500;
+          
+          if (isTransient && attempt < maxRetries) {
+            const backoff = 800 * (attempt + 1);
+            console.warn(`Gemini ${model} returned ${response.status} (attempt ${attempt + 1}), retrying in ${backoff}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
             continue;
           }
-          errorLogs.push(`${model} (exception): ${err?.message || String(err)}`);
-          console.warn(`Error trying ${model}:`, err);
+
+          errorLogs.push(`${model} (${response.status}): ${errBody.slice(0, 150)}`);
+          console.warn(`Gemini ${model} returned ${response.status}`);
           break;
         }
+      } catch (err: any) {
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        errorLogs.push(`${model} (exception): ${err?.message || String(err)}`);
+        console.warn(`Error trying ${model}:`, err);
+        break;
       }
+    }
 
-      if (geminiSuccess) break;
+    if (geminiSuccess) break;
+  }
+
+  // 2. Fallback: Google Gemini OpenAI-compatible REST API
+  if (!geminiSuccess) {
+    console.log('Trying Gemini OpenAI-compatible endpoint fallback...');
+    const geminiFallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+    
+    for (const fbModel of geminiFallbackModels) {
+      try {
+        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: fbModel,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: 'system', content: SYSTEM_INSTRUCTION },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Identify this food and provide accurate nutritional values per 100g in JSON format.' },
+                  { type: 'image_url', image_url: { url: image } }
+                ]
+              }
+            ],
+            max_tokens: 800,
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const raw = await aiResponse.json();
+          contentText = raw.choices?.[0]?.message?.content ?? '';
+          if (contentText) {
+            geminiSuccess = true;
+            console.log(`Successfully identified food using fallback ${fbModel}`);
+            break;
+          }
+        } else {
+          const errText = await aiResponse.text().catch(() => '');
+          errorLogs.push(`fallback ${fbModel} (${aiResponse.status}): ${errText.slice(0, 120)}`);
+        }
+      } catch (fbErr: any) {
+        errorLogs.push(`fallback ${fbModel} exception: ${fbErr?.message || String(fbErr)}`);
+      }
     }
   }
 
-  // 2. Fallback: OpenAI-compatible gateway (Lovable or OpenRouter)
-  if (!geminiSuccess) {
-    console.log('Falling back to chat completions gateway...');
-    const gatewayEndpoint = apiKey.startsWith('sk_') 
-      ? 'https://ai.gateway.lovable.dev/v1/chat/completions'
-      : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-    const gatewayModel = apiKey.startsWith('sk_') ? 'google/gemini-2.5-flash' : 'gemini-3.6-flash';
-
-    const aiResponse = await fetch(gatewayEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: gatewayModel,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: 'system', content: SYSTEM_INSTRUCTION },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Identify this food and provide accurate nutritional values per 100g in JSON format.' },
-              { type: 'image_url', image_url: { url: image } }
-            ]
-          }
-        ],
-        max_tokens: 600,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text().catch(() => '');
-      if (errText.includes('RESOURCE_EXHAUSTED') || errText.includes('Quota exceeded') || aiResponse.status === 429) {
-        throw new Error('Gemini API rate limit reached. Please wait a few seconds and try scanning again.');
-      }
-      throw new Error(`AI identification failed: ${errorLogs.join(' | ')}`);
-    }
-
-    const raw = await aiResponse.json();
-    contentText = raw.choices?.[0]?.message?.content ?? '';
+  if (!geminiSuccess || !contentText) {
+    throw new Error(`Gemini AI identification failed: ${errorLogs.join(' | ')}`);
   }
 
   console.log('Raw AI response content:', contentText);

@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, TrendingUp, ArrowUp, ArrowDown, Scale, Trophy, Star, AlertTriangle } from "lucide-react";
+import { CheckCircle2, TrendingUp, ArrowUp, ArrowDown, Scale, Trophy, Star, AlertTriangle, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 
@@ -34,6 +34,7 @@ interface FoodResultsProps {
   data: {
     identifiedFood: string;
     confidence: number;
+    healthScore?: number;
     nutritionInfo: {
       calories: number;
       protein: number;
@@ -43,6 +44,7 @@ interface FoodResultsProps {
       sugar?: number;
       fiber?: number;
       sodium?: number;
+      healthScore?: number;
     };
     totalCalories?: number;
     totalProtein?: number;
@@ -81,7 +83,9 @@ const AlternativeCard = ({
           {isBest && <Star className="h-4 w-4 text-accent fill-accent shrink-0" />}
           <h4 className="text-lg font-semibold text-foreground">{alt.name}</h4>
         </div>
-        <Badge variant={getHealthBadgeVariant(alt.healthScore)}>{alt.healthScore}</Badge>
+        <Badge variant={getHealthBadgeVariant(alt.healthScore)} className="text-sm font-bold">
+          Score: {alt.healthScore}
+        </Badge>
       </div>
       <Progress value={alt.healthScore} className="h-2" />
     </div>
@@ -98,6 +102,33 @@ const AlternativeCard = ({
       </ul>
     </div>
 
+    {alt.reasons && alt.reasons.length > 0 && (
+      <div className="pt-2 border-t border-border/30 space-y-1.5">
+        <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Score Impact:</p>
+        <div className="space-y-1">
+          {alt.reasons.slice(0, 3).map((r, idx) => (
+            <div key={idx} className="text-xs flex items-center gap-1.5">
+              {r.status === 'better' ? (
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <ArrowUp className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  {r.actualChange}
+                </span>
+              ) : r.status === 'worse' ? (
+                <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
+                  <ArrowDown className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" />
+                  {r.actualChange}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  • {r.actualChange}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
     {alt.nutrition && (
       <div className="pt-4 border-t border-border/50 space-y-3">
         <div className="flex items-center gap-2">
@@ -113,7 +144,7 @@ const AlternativeCard = ({
             <span className="text-center">{alt.name.split(' ').slice(0, 2).join(' ')}</span>
           </div>
           {[
-            { label: 'Calories', original: originalNutrition.calories, alt: alt.nutrition.calories, unit: '', lower: true },
+            { label: 'Calories', original: originalNutrition.calories, alt: alt.nutrition.calories, unit: 'kcal', lower: true },
             { label: 'Protein', original: originalNutrition.protein, alt: alt.nutrition.protein, unit: 'g', lower: false },
             { label: 'Carbs', original: originalNutrition.carbs, alt: alt.nutrition.carbs, unit: 'g', lower: true },
             { label: 'Fat', original: originalNutrition.fats, alt: alt.nutrition.fat, unit: 'g', lower: true },
@@ -131,12 +162,12 @@ const AlternativeCard = ({
                   {Math.round(row.original)}{row.unit}
                 </span>
                 <span className={`text-center font-medium flex items-center justify-center gap-1 ${
-                  isBetter ? 'text-green-600 dark:text-green-400' : 
-                  isWorse ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
+                  isBetter ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 
+                  isWorse ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-foreground'
                 }`}>
                   {Math.round(row.alt)}{row.unit}
-                  {isBetter && <ArrowDown className="h-3 w-3" />}
-                  {isWorse && <ArrowUp className="h-3 w-3" />}
+                  {isBetter && <ArrowUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                  {isWorse && <ArrowDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400 shrink-0" />}
                 </span>
               </div>
             );
@@ -154,17 +185,20 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
   const detectedAllergens = data.allergenWarning || [];
   
   const getHealthBadgeVariant = (score: number): "default" | "secondary" | "destructive" | "outline" => {
-    if (score >= 80) return "default";
-    if (score >= 60) return "secondary";
+    if (score >= 75) return "default";
+    if (score >= 50) return "secondary";
     return "outline";
   };
 
   const regularAlternatives = data.alternatives || [];
+  const baselineScore = data.healthScore ?? data.nutritionInfo.healthScore ?? 50;
 
   const bestChoice = data.bestChoice || 
     (regularAlternatives.length > 0 
       ? regularAlternatives.reduce((a, b) => a.healthScore > b.healthScore ? a : b)
       : null);
+
+  const isOptimal = data.alreadyOptimal || (!bestChoice && regularAlternatives.length === 0);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -197,25 +231,41 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
         </Card>
       )}
 
-      {/* Identified Food */}
+      {/* Identified Food Header Card */}
       <Card className="p-6 bg-gradient-to-br from-card to-muted/20 shadow-card">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
               <h2 className="text-2xl font-bold text-foreground">{data.identifiedFood}</h2>
+              {isOptimal && (
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Optimal Food
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               Confidence: {Math.round(data.confidence * 100)}%
               {data.servingInfo && ` • Serving: ${data.servingInfo}`}
             </p>
           </div>
+
+          <div className="flex flex-col items-start md:items-end gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-medium uppercase">Health Score:</span>
+              <Badge variant={getHealthBadgeVariant(baselineScore)} className="text-base px-3 py-1 font-bold">
+                {baselineScore} / 100
+              </Badge>
+            </div>
+            <Progress value={baselineScore} className="w-32 h-2" />
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Calories</p>
-            <p className="text-lg font-semibold">{data.nutritionInfo.calories}</p>
+            <p className="text-lg font-semibold">{data.nutritionInfo.calories} kcal</p>
             {data.totalCalories && data.totalCalories !== data.nutritionInfo.calories && (
               <p className="text-xs text-primary font-medium">
                 Total: {Math.round(data.totalCalories)} kcal
@@ -252,26 +302,29 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
         </div>
       </Card>
 
-      {/* Already Optimal State */}
-      {(data.alreadyOptimal || (!bestChoice && regularAlternatives.length === 0)) ? (
-        <Card className="p-6 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border-2 border-emerald-500/30 shadow-elevated animate-in zoom-in-95 duration-300">
+      {/* Already Optimal State Congratulatory Banner */}
+      {isOptimal ? (
+        <Card className="p-6 bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-teal-500/15 border-2 border-emerald-500/40 shadow-elevated animate-in zoom-in-95 duration-300">
           <div className="flex items-start gap-4">
-            <div className="p-3 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
-              <CheckCircle2 className="h-7 w-7" />
+            <div className="p-3.5 rounded-full bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <CheckCircle2 className="h-8 w-8" />
             </div>
-            <div className="space-y-2 flex-1">
+            <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  Already an Optimal Choice
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 text-sm shadow-sm flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4" />
+                  🎉 Congratulations! Optimal Choice
                 </Badge>
-                <span className="text-xs text-muted-foreground font-medium">Top Tier Nutrition</span>
+                <span className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold uppercase tracking-wider">
+                  Health Score: {baselineScore}/100
+                </span>
               </div>
               <h3 className="text-xl font-bold text-foreground">
-                "{data.identifiedFood}" is already a great nutritional choice!
+                "{data.identifiedFood}" is already an optimal healthy choice!
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Based on our model scoring and your profile goals ({profile.dietPreference}, goal: {profile.targetBodyType}), 
-                this food already has an excellent nutrient balance. No healthier alternatives are needed — keep enjoying this smart meal!
+                Based on our ML linear scoring model and your profile preferences ({profile.dietPreference}, goal: {profile.targetBodyType}), 
+                this food already achieves top-tier nutritional balance. No alternatives in our database beat this food by more than 3 points — keep enjoying this smart, nutritious meal!
               </p>
             </div>
           </div>

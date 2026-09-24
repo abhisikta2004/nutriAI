@@ -86,40 +86,35 @@ serve(async (req) => {
     const baselineScore = await calculateHealthScore(baselineNutrition, targetBodyType);
     console.log('Baseline health score:', baselineScore);
 
-    // 3. Check if food is already an optimal healthy choice (score >= 70)
-    let filteredAlternatives: Alternative[] = [];
-    const isAlreadyHealthy = baselineScore >= 70;
+    // 3. Search for healthier alternatives that beat the baseline health score by >3 points
+    console.log('Searching for healthier alternatives that improve on baseline score:', baselineScore);
+    const rawAlternatives = await getHealthierAlternatives(
+      {
+        identifiedFood: identified.name,
+        nutritionInfo: baselineNutrition
+      },
+      baselineScore,
+      targetBodyType
+    );
 
-    if (!isAlreadyHealthy) {
-      console.log('Searching for healthier alternatives...');
-      const rawAlternatives = await getHealthierAlternatives(
-        {
-          identifiedFood: identified.name,
-          nutritionInfo: baselineNutrition
-        },
-        baselineScore,
-        targetBodyType
-      );
-
-      // 4. Filter alternatives based on diet preference and allergies
-      filteredAlternatives = rawAlternatives.filter(alt => {
-        const name = alt.name.toLowerCase();
-        
-        if (dietPreference === 'vegan') {
-          const nonVegan = ['chicken', 'meat', 'fish', 'egg', 'milk', 'dairy', 'yogurt', 'cheese', 'butter', 'honey'];
-          if (nonVegan.some(item => name.includes(item))) return false;
-        } else if (dietPreference === 'vegetarian') {
-          const nonVeg = ['chicken', 'meat', 'fish', 'mutton', 'beef', 'pork', 'prawn', 'shrimp'];
-          if (nonVeg.some(item => name.includes(item))) return false;
-        }
-        
-        for (const allergy of allergies) {
-          if (name.includes(allergy.toLowerCase())) return false;
-        }
-        
-        return true;
-      });
-    }
+    // 4. Filter alternatives based on diet preference and allergies
+    const filteredAlternatives = rawAlternatives.filter(alt => {
+      const name = alt.name.toLowerCase();
+      
+      if (dietPreference === 'vegan') {
+        const nonVegan = ['chicken', 'meat', 'fish', 'egg', 'milk', 'dairy', 'yogurt', 'cheese', 'butter', 'honey'];
+        if (nonVegan.some(item => name.includes(item))) return false;
+      } else if (dietPreference === 'vegetarian') {
+        const nonVeg = ['chicken', 'meat', 'fish', 'mutton', 'beef', 'pork', 'prawn', 'shrimp'];
+        if (nonVeg.some(item => name.includes(item))) return false;
+      }
+      
+      for (const allergy of allergies) {
+        if (name.includes(allergy.toLowerCase())) return false;
+      }
+      
+      return true;
+    });
 
     // 5. Calculate detailed total nutrition if custom ingredients or serving details provided
     const detailedResult = processDetailedLog(identified, detailedLog);
@@ -130,19 +125,21 @@ serve(async (req) => {
       console.log('Allergen warning detected:', allergenWarning, 'in food:', identified.name);
     }
 
-    // 7. Pick best choice and detect already-optimal state
+    // 7. Pick best choice and detect already-optimal state purely based on whether any candidate beats baseline
     let bestChoice: Alternative | null = null;
     if (filteredAlternatives.length > 0) {
       const sorted = [...filteredAlternatives].sort((a, b) => b.healthScore - a.healthScore);
       bestChoice = sorted[0];
     }
 
-    const alreadyOptimal = isAlreadyHealthy || filteredAlternatives.length === 0;
+    // Food is already optimal if no alternative beats baseline by the margin threshold
+    const alreadyOptimal = filteredAlternatives.length === 0;
 
     // 8. Assemble final response
     const result: AnalyzeResponse = {
       identifiedFood: identified.name,
       confidence: identified.confidence,
+      healthScore: Math.round(baselineScore),
       nutritionInfo: {
         calories: Math.round(identified.nutrition.calories),
         protein: Math.round(identified.nutrition.protein * 10) / 10,

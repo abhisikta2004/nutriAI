@@ -116,13 +116,12 @@ export async function calculateHealthScore(nutrition: NutritionInfo, targetBodyT
     ];
     
     // Apply goal multipliers to weights for target-specific scoring
-    let result = model.bias;
+    let score = model.bias;
     for (let i = 0; i < features.length; i++) {
       const effectiveWeight = model.weights[i] * (multipliers[i] ?? 1.0);
-      result += effectiveWeight * features[i];
+      score += effectiveWeight * features[i];
     }
-    const score = (1 / (1 + Math.exp(-result))) * 100;
-    return Math.max(0, Math.min(100, score));
+    return Math.max(5, Math.min(98, Math.round(score * 10) / 10));
   }
   
   // Fallback to rule-based scoring with goal adjustments if model not available
