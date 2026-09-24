@@ -99,7 +99,7 @@ export const OnboardingFlow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/10 to-background flex items-center justify-center px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
       <Card className="w-full max-w-lg p-8 bg-card/95 backdrop-blur shadow-elevated animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Progress Bar */}
         <div className="mb-8">
@@ -109,7 +109,7 @@ export const OnboardingFlow = () => {
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"
+              className="h-full bg-sage transition-all duration-500 ease-out"
               style={{ width: `${(step / totalSteps) * 100}%` }}
             />
           </div>
@@ -133,14 +133,14 @@ export const OnboardingFlow = () => {
                   key={option.value}
                   onClick={() => setFormData({ ...formData, dietPreference: option.value })}
                   className={cn(
-                    "flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                    "flex items-center gap-4 rounded-3xl border p-4 text-left transition-all duration-500",
                     formData.dietPreference === option.value
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      ? "border-sage bg-sage/10 shadow-soft"
+                      : "border-border hover:border-sage/50 hover:bg-muted"
                   )}
                 >
                   <div className={cn(
-                    "p-3 rounded-lg",
+                    "rounded-full p-3",
                     formData.dietPreference === option.value
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
@@ -196,7 +196,7 @@ export const OnboardingFlow = () => {
 
               {/* BMI Display */}
               {formData.weight > 0 && formData.height > 0 && (
-                <div className="p-4 bg-muted/50 rounded-xl border border-border animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="rounded-3xl border border-border bg-muted/70 p-4 duration-500 animate-in fade-in slide-in-from-bottom-2">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">
                       <Scale className="h-5 w-5 text-primary" />
@@ -212,7 +212,7 @@ export const OnboardingFlow = () => {
                     </div>
                   </div>
                   {/* BMI Scale Visual */}
-                  <div className="mt-3 relative h-2 rounded-full bg-gradient-to-r from-amber-400 via-green-500 via-60% to-red-500 overflow-hidden">
+                  <div className="mt-3 relative h-2 rounded-full bg-gradient-to-r from-health-moderate via-sage to-terracotta overflow-hidden">
                     <div 
                       className="absolute top-0 w-1 h-full bg-foreground rounded-full shadow-lg transform -translate-x-1/2 transition-all duration-500"
                       style={{ left: `${Math.min(Math.max(((bmi - 15) / 25) * 100, 0), 100)}%` }}
@@ -287,7 +287,7 @@ export const OnboardingFlow = () => {
 
             {/* Selected Allergies */}
             {formData.allergies.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex flex-wrap gap-2 rounded-3xl bg-muted/70 p-4">
                 {formData.allergies.map((allergy) => (
                   <Badge
                     key={allergy}

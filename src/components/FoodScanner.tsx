@@ -208,12 +208,12 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
   };
 
   return (
-    <Card className="p-8 bg-gradient-to-br from-card to-muted/30 border-border/50 shadow-card">
+    <Card className="border-border/80 bg-card p-8 shadow-card">
       <div
-        className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all ${
+        className={`relative rounded-[40px] border border-dashed p-10 text-center transition-all duration-500 ${
           dragActive
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-primary/50"
+            ? "border-sage bg-sage/10"
+            : "border-border hover:border-sage/60"
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -234,7 +234,7 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
             <img
               src={preview}
               alt="Food preview"
-              className="max-h-64 mx-auto rounded-xl shadow-elevated border border-border/40"
+              className="mx-auto max-h-72 rounded-t-[140px] border border-border/40 object-cover shadow-elevated"
             />
             
             {isAnalyzing ? (
@@ -256,7 +256,7 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
             htmlFor="file-upload"
             className="cursor-pointer flex flex-col items-center gap-4"
           >
-            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 text-primary shadow-sm hover:scale-105 transition-all">
+            <div className="rounded-full border border-sage/30 bg-sage/10 p-5 text-sage shadow-soft transition-transform duration-700 ease-out hover:scale-105">
               <Upload className="h-10 w-10 text-primary" />
             </div>
             <div className="space-y-1.5">

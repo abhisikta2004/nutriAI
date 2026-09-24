@@ -80,7 +80,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
                 </DialogDescription>
               </div>
             </div>
-            <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs flex items-center gap-1.5 font-semibold">
+            <Badge className="bg-health-good/15 text-health-good border-health-good/40 text-xs flex items-center gap-1.5 font-semibold">
               <Clock className="h-3 w-3" />
               Synced {lastSyncedText}
             </Badge>
@@ -109,22 +109,22 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
 
             <div className="space-y-1.5 text-xs">
               <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 font-medium text-red-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FA114F]" />
+                <span className="flex items-center gap-1.5 font-medium text-terracotta">
+                  <span className="w-2.5 h-2.5 rounded-full bg-terracotta" />
                   Move (Active Burn):
                 </span>
                 <strong className="text-foreground">{activeBurn} / 500 kcal</strong>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 font-medium text-amber-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#FF9500]" />
+                <span className="flex items-center gap-1.5 font-medium text-health-moderate">
+                  <span className="w-2.5 h-2.5 rounded-full bg-health-moderate" />
                   Steps Today:
                 </span>
                 <strong className="text-foreground">{steps.toLocaleString()} steps</strong>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 font-medium text-emerald-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#30D158]" />
+                <span className="flex items-center gap-1.5 font-medium text-health-good">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sage" />
                   Dietary Intake:
                 </span>
                 <strong className="text-foreground">{summary.totalCaloriesConsumed} / {summary.dailyTargetCalories} kcal</strong>
@@ -137,21 +137,21 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <Card className="p-3 bg-card/60 text-center space-y-0.5">
             <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-              <Flame className="h-3 w-3 text-red-500" /> Active Burn
+              <Flame className="h-3 w-3 text-terracotta" /> Active Burn
             </p>
             <p className="text-base font-bold text-foreground">{activeBurn} kcal</p>
           </Card>
 
           <Card className="p-3 bg-card/60 text-center space-y-0.5">
             <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-              <Footprints className="h-3 w-3 text-amber-500" /> Steps
+              <Footprints className="h-3 w-3 text-health-moderate" /> Steps
             </p>
             <p className="text-base font-bold text-foreground">{steps.toLocaleString()}</p>
           </Card>
 
           <Card className="p-3 bg-card/60 text-center space-y-0.5">
             <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-              <Sparkles className="h-3 w-3 text-emerald-500" /> Consumed
+              <Sparkles className="h-3 w-3 text-health-good" /> Consumed
             </p>
             <p className="text-base font-bold text-foreground">{summary.totalCaloriesConsumed} kcal</p>
           </Card>
@@ -165,7 +165,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
         </div>
 
         {/* iOS Shortcuts Sync Bridge (The Only Sync Method) */}
-        <Card className="p-5 bg-gradient-to-br from-card via-card/95 to-primary/5 border border-border/70 shadow-sm space-y-4">
+        <Card className="p-5 bg-card border border-border/70 shadow-sm space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
               <Smartphone className="h-5 w-5" />
@@ -207,7 +207,7 @@ export const AppleHealthModal: React.FC<AppleHealthModalProps> = ({ open, onOpen
               size="sm" 
               variant="outline" 
               onClick={handleTestShortcutSync} 
-              className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 gap-1.5"
+              className="text-xs text-health-good border-health-good/40 hover:bg-health-good/15 gap-1.5"
             >
               <Zap className="h-3.5 w-3.5" />
               Test Sync (520 kcal, 8.5k steps)

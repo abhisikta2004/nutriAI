@@ -14,14 +14,14 @@ export const FoodScanModeSelector = ({ value, onChange }: FoodScanModeSelectorPr
       <button
         onClick={() => onChange("quick")}
         className={cn(
-          "p-4 rounded-xl border-2 transition-all duration-200 text-left space-y-2",
+          "rounded-3xl border p-4 text-left transition-all duration-500 space-y-2",
           value === "quick"
-            ? "border-primary bg-primary/10 shadow-md"
-            : "border-border hover:border-primary/50 hover:bg-muted/30"
+            ? "border-sage bg-sage/10 shadow-soft"
+            : "border-border hover:border-sage/50 hover:bg-muted"
         )}
       >
         <div className={cn(
-          "w-10 h-10 rounded-lg flex items-center justify-center",
+          "flex h-10 w-10 items-center justify-center rounded-full",
           value === "quick" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
         )}>
           <Camera className="h-5 w-5" />
@@ -35,14 +35,14 @@ export const FoodScanModeSelector = ({ value, onChange }: FoodScanModeSelectorPr
       <button
         onClick={() => onChange("detailed")}
         className={cn(
-          "p-4 rounded-xl border-2 transition-all duration-200 text-left space-y-2",
+          "rounded-3xl border p-4 text-left transition-all duration-500 space-y-2",
           value === "detailed"
-            ? "border-primary bg-primary/10 shadow-md"
-            : "border-border hover:border-primary/50 hover:bg-muted/30"
+            ? "border-sage bg-sage/10 shadow-soft"
+            : "border-border hover:border-sage/50 hover:bg-muted"
         )}
       >
         <div className={cn(
-          "w-10 h-10 rounded-lg flex items-center justify-center",
+          "flex h-10 w-10 items-center justify-center rounded-full",
           value === "detailed" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
         )}>
           <ClipboardList className="h-5 w-5" />

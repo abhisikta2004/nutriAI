@@ -5,7 +5,7 @@ import { VoiceAdvisor } from "@/components/VoiceAdvisor";
 import { FoodResults } from "@/components/FoodResults";
 import { AppleHealthCard } from "@/components/AppleHealthCard";
 import { ScannedMealsJournal } from "@/components/ScannedMealsJournal";
-import { Utensils, Brain, ArrowLeft, Camera, Mic, Sparkles } from "lucide-react";
+import { Utensils, Brain, ArrowLeft, Camera, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 
@@ -14,7 +14,7 @@ const FoodAnalyzer = () => {
   const [inputMode, setInputMode] = useState<"photo" | "voice">("photo");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-background flex flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <Header />
 
       {/* Header */}
@@ -30,15 +30,13 @@ const FoodAnalyzer = () => {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
         <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-primary/10 rounded-full">
-            <Utensils className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold text-primary">
-              AI-Powered Nutrition Analysis & Voice Advisor
-            </span>
+          <div className="inline-flex items-center gap-3 rounded-full border border-stone bg-card px-5 py-2 text-xs uppercase tracking-widest text-sage">
+            <Utensils className="h-4 w-4" strokeWidth={1.5} />
+            <span>Nutrition analysis & voice advisor</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Discover Healthier Food Choices
+          <h1 className="text-5xl leading-[1.05] md:text-7xl">
+            Discover <span className="italic text-sage">healthier</span> food choices
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -47,30 +45,30 @@ const FoodAnalyzer = () => {
           </p>
 
           {/* Mode Switcher Tabs */}
-          <div className="inline-flex p-1.5 bg-muted/60 backdrop-blur-md rounded-2xl border border-border/50 shadow-sm gap-2">
+          <div className="inline-flex flex-wrap justify-center gap-2 rounded-full border border-border bg-muted p-1.5">
             <button
               onClick={() => setInputMode("photo")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+              className={`flex items-center gap-2 rounded-full px-6 py-3 text-xs uppercase tracking-widest transition-all duration-300 ${
                 inputMode === "photo"
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-primary text-primary-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Camera className="h-4 w-4" />
-              Photo Scanner
+              <Camera className="h-4 w-4" strokeWidth={1.5} />
+              Photo
             </button>
             <button
               onClick={() => setInputMode("voice")}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+              className={`flex items-center gap-2 rounded-full px-6 py-3 text-xs uppercase tracking-widest transition-all duration-300 ${
                 inputMode === "voice"
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-primary text-primary-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Mic className="h-4 w-4" />
-              Voice Advisor
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground font-bold uppercase tracking-wider">
-                Voice AI
+              <Mic className="h-4 w-4" strokeWidth={1.5} />
+              Voice
+              <span className="rounded-full bg-terracotta px-2 py-0.5 text-[10px] tracking-widest text-accent-foreground">
+                Live
               </span>
             </button>
           </div>

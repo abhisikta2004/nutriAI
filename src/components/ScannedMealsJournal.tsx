@@ -83,16 +83,16 @@ export const ScannedMealsJournal: React.FC = () => {
           </Card>
 
           <Card className="p-4 bg-card/70 border-border/60">
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+            <p className="text-xs text-health-good font-medium flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
               Healthier Swaps
             </p>
-            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{healthierCount}</p>
+            <p className="text-xl font-bold text-health-good mt-0.5">{healthierCount}</p>
           </Card>
 
           <Card className="p-4 bg-card/70 border-border/60">
-            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Original Dishes</p>
-            <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-0.5">{originalCount}</p>
+            <p className="text-xs text-health-moderate font-medium">Original Dishes</p>
+            <p className="text-xl font-bold text-health-moderate mt-0.5">{originalCount}</p>
           </Card>
 
           <Card className="p-4 bg-card/70 border-border/60">
@@ -110,7 +110,7 @@ export const ScannedMealsJournal: React.FC = () => {
         <div className="flex items-center gap-2 border-b border-border/50 pb-3 flex-wrap">
           <button
             onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${
+            className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-all duration-300 ${
               filter === "all"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -120,9 +120,9 @@ export const ScannedMealsJournal: React.FC = () => {
           </button>
           <button
             onClick={() => setFilter("healthier")}
-            className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all flex items-center gap-1.5 ${
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-all duration-300 ${
               filter === "healthier"
-                ? "bg-emerald-600 text-white shadow-sm"
+                ? "bg-health-excellent text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
@@ -131,9 +131,9 @@ export const ScannedMealsJournal: React.FC = () => {
           </button>
           <button
             onClick={() => setFilter("original")}
-            className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${
+            className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition-all duration-300 ${
               filter === "original"
-                ? "bg-amber-600 text-white shadow-sm"
+                ? "bg-health-moderate text-white shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
@@ -144,7 +144,7 @@ export const ScannedMealsJournal: React.FC = () => {
 
       {/* Meal Journal List */}
       {filteredMeals.length === 0 ? (
-        <Card className="p-10 text-center space-y-4 bg-gradient-to-br from-card to-muted/20 border-dashed border-2 border-border/70">
+        <Card className="p-10 text-center space-y-4 bg-card border-dashed border-2 border-border/70">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-sm">
             <Camera className="h-7 w-7" />
           </div>
@@ -188,14 +188,14 @@ export const ScannedMealsJournal: React.FC = () => {
                 {/* Background ambient gradient based on choice */}
                 <div 
                   className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl pointer-events-none ${
-                    isHealthier ? "bg-emerald-500/10" : "bg-amber-500/10"
+                    isHealthier ? "bg-health-good/15" : "bg-health-moderate/15"
                   }`} 
                 />
 
                 <div className="flex items-start gap-4 relative z-10">
                   {/* Scanned Photo Thumbnail */}
                   <div 
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-muted/40 border border-border/60 shrink-0 relative cursor-pointer group/photo shadow-sm"
+                    className="group/photo relative h-24 w-20 shrink-0 cursor-pointer overflow-hidden rounded-t-[48px] border border-border/60 bg-muted/40 shadow-soft sm:h-28 sm:w-24"
                     onClick={() => meal.scannedImage && setSelectedPhoto(meal.scannedImage)}
                   >
                     {meal.scannedImage ? (
@@ -203,14 +203,14 @@ export const ScannedMealsJournal: React.FC = () => {
                         <img
                           src={meal.scannedImage}
                           alt={meal.originalDishName || meal.foodName}
-                          className="w-full h-full object-cover group-hover/photo:scale-105 transition-transform duration-300"
+                          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover/photo:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
                           <ImageIcon className="h-5 w-5 text-white" />
                         </div>
                       </>
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-2 text-center bg-gradient-to-br from-muted/30 to-muted/80">
+                      <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-2 text-center bg-muted">
                         <Utensils className="h-6 w-6 mb-1 opacity-70" />
                         <span className="text-[10px] font-medium leading-tight">Voice / Scan</span>
                       </div>
@@ -243,15 +243,15 @@ export const ScannedMealsJournal: React.FC = () => {
                     {/* Choice Badge (Healthier Alternative vs Original) */}
                     <div>
                       {isHealthier ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold">
-                          <Sparkles className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-health-good/40 bg-health-good/15 px-3 py-1 text-xs text-health-excellent">
+                          <Sparkles className="h-3.5 w-3.5 text-health-good shrink-0" />
                           <span className="truncate">
                             Healthier Swap Chosen: <strong>{meal.alternativeName || meal.foodName}</strong>
                           </span>
                         </div>
                       ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold">
-                          <Utensils className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-health-moderate/40 bg-health-moderate/15 px-3 py-1 text-xs text-health-moderate">
+                          <Utensils className="h-3.5 w-3.5 text-health-moderate shrink-0" />
                           <span>Original Dish Logged</span>
                         </div>
                       )}
@@ -263,10 +263,10 @@ export const ScannedMealsJournal: React.FC = () => {
                 <div className="pt-2.5 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2 relative z-10">
                   <div className="flex items-center gap-3 font-medium">
                     <span className="text-foreground font-bold flex items-center gap-1">
-                      <Flame className="h-3.5 w-3.5 text-red-500" />
+                      <Flame className="h-3.5 w-3.5 text-terracotta" />
                       {meal.calories} kcal
                     </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="text-health-good font-semibold">
                       {meal.protein}g Protein
                     </span>
                     <span>{meal.carbs}g Carbs</span>
@@ -286,10 +286,10 @@ export const ScannedMealsJournal: React.FC = () => {
       {/* Photo Lightbox Dialog */}
       {selectedPhoto && (
         <div 
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 z-[70] flex animate-in fade-in items-center justify-center bg-forest/45 p-4 backdrop-blur-sm"
           onClick={() => setSelectedPhoto(null)}
         >
-          <div className="relative max-w-xl max-h-[85vh] bg-card rounded-2xl overflow-hidden border border-border/60 shadow-2xl p-2" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-h-[85vh] max-w-xl overflow-hidden rounded-[40px] border border-border/60 bg-card p-3 shadow-hover" onClick={(e) => e.stopPropagation()}>
             <img
               src={selectedPhoto}
               alt="Scanned Food Zoom"

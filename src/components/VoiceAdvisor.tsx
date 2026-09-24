@@ -268,7 +268,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
   const isBusy = isListening || isProcessing || isAnalyzingGlobal;
 
   return (
-    <Card className="p-8 bg-gradient-to-br from-card via-card/90 to-primary/5 border-2 border-primary/20 shadow-elevated relative overflow-hidden">
+    <Card className="p-8 bg-card border-2 border-primary/20 shadow-elevated relative overflow-hidden">
       {/* Ambient background blur */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
@@ -281,7 +281,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
             Voice Nutrition Assistant
           </Badge>
           {isSpeaking && (
-            <Badge className="bg-emerald-600 text-white font-medium animate-pulse flex items-center gap-1.5">
+            <Badge className="bg-health-excellent text-white font-medium animate-pulse flex items-center gap-1.5">
               <Volume2 className="h-3.5 w-3.5" />
               Speaking
             </Badge>
@@ -302,13 +302,13 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
         <div className="relative my-4 flex items-center justify-center">
           {isListening && (
             <>
-              <div className="absolute w-36 h-36 rounded-full bg-primary/20 animate-ping" />
+              <div className="absolute h-36 w-36 rounded-full bg-sage/20 animate-pulse" />
               <div className="absolute w-28 h-28 rounded-full bg-primary/30 animate-pulse" />
             </>
           )}
 
           {isSpeaking && (
-            <div className="absolute -inset-4 rounded-full border-2 border-emerald-500/40 animate-spin opacity-75" />
+            <div className="absolute -inset-4 rounded-full border-2 border-sage/50 animate-pulse opacity-75" />
           )}
 
           <button
@@ -316,12 +316,12 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
             disabled={isProcessing || isAnalyzingGlobal}
             className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl focus:outline-none focus:ring-4 focus:ring-primary/40 ${
               isListening
-                ? "bg-red-500 text-white scale-110 shadow-red-500/30 animate-bounce"
+                ? "bg-terracotta text-white scale-110 shadow-soft duration-500"
                 : isProcessing
                 ? "bg-primary/50 text-white cursor-wait"
                 : isSpeaking
-                ? "bg-emerald-600 text-white scale-105 shadow-emerald-500/30"
-                : "bg-gradient-to-tr from-primary to-accent text-white hover:scale-105 hover:shadow-primary/40 active:scale-95"
+                ? "bg-health-excellent text-white scale-105 shadow-soft"
+                : "bg-primary text-white hover:scale-105 hover:shadow-primary/40 active:scale-95"
             }`}
             title={isListening ? "Tap to Finish Speaking" : "Tap to Speak"}
           >
@@ -341,8 +341,8 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
         <div className="min-h-[48px] flex flex-col items-center justify-center space-y-1">
           {isListening ? (
             <div className="space-y-1">
-              <span className="text-sm font-semibold text-red-500 flex items-center justify-center gap-1.5 animate-pulse">
-                <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+              <span className="text-sm font-semibold text-terracotta flex items-center justify-center gap-1.5 animate-pulse">
+                <span className="h-2 w-2 rounded-full bg-terracotta inline-block" />
                 Listening to your voice...
               </span>
               <p className="text-base font-medium text-foreground italic max-w-md">
@@ -360,7 +360,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
           ) : isSpeaking ? (
             <div className="space-y-2 max-w-lg bg-muted/40 rounded-xl p-4 border border-border/40">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <span className="text-xs font-semibold text-health-good uppercase tracking-wider flex items-center gap-1">
                   <Volume2 className="h-3.5 w-3.5" />
                   Spoken Nutrition Advice:
                 </span>
@@ -415,7 +415,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
                   variant="outline"
                   size="sm"
                   onClick={() => handleExampleClick(example)}
-                  className="text-xs bg-card/60 hover:bg-primary/10 hover:text-primary hover:border-primary/40 transition-all rounded-full py-1 h-auto"
+                  className="h-auto rounded-full bg-card/60 py-2 text-xs normal-case tracking-normal transition-all duration-300 hover:border-sage/40 hover:bg-sage/10 hover:text-foreground"
                 >
                   "{example}"
                 </Button>
@@ -440,7 +440,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
         )}
 
         {!voiceSupported && (
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
+          <div className="flex items-center gap-2 rounded-3xl border border-health-moderate/40 bg-health-moderate/10 p-3 text-xs text-health-moderate">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>Voice input uses the Web Speech API. For full hands-free speech recognition, please open in Chrome, Safari, or Edge.</span>
           </div>

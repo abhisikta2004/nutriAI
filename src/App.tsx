@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import FoodAnalyzer from "./pages/FoodAnalyzer";
 import NotFound from "./pages/NotFound";
+import { PaperGrain } from "./components/PaperGrain";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
     <UserProfileProvider>
       <AppleHealthProvider>
         <TooltipProvider>
+          <PaperGrain />
           <Toaster />
           <Sonner />
           <BrowserRouter>

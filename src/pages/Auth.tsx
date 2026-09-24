@@ -53,29 +53,35 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-muted/20 to-background flex flex-col justify-center items-center px-4 relative overflow-hidden">
-      {/* Background blobs for premium feel */}
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl -z-10 animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-secondary/10 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: "2s" }} />
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4">
+      <div className="pointer-events-none absolute -left-16 top-16 h-64 w-40 rounded-t-[200px] bg-secondary" />
+      <div className="pointer-events-none absolute -right-10 bottom-10 h-48 w-48 rounded-full bg-sage/15" />
 
-      {/* Floating Back Button */}
-      <div className="absolute top-8 left-8">
+      <div className="absolute left-6 top-8 md:left-8">
         <Link to="/">
           <Button variant="ghost" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+            Back home
           </Button>
         </Link>
       </div>
 
-      <Card className="w-full max-w-md p-8 bg-card/70 backdrop-blur-md border-border/50 shadow-2xl space-y-6 relative">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full text-xs font-semibold text-primary mb-2">
-            <Sparkles className="h-3 w-3" />
-            <span>NutriAI Cloud Sync</span>
+      <Card className="relative w-full max-w-md space-y-6 bg-card/90 p-8 backdrop-blur-sm md:p-10">
+        <div className="space-y-3 text-center">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-sage/15 px-3 py-1 text-xs uppercase tracking-widest text-sage">
+            <Sparkles className="h-3 w-3" strokeWidth={1.5} />
+            <span>Cloud sync</span>
           </div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-            {isSignUp ? "Create an Account" : "Welcome Back"}
+          <h2 className="text-4xl">
+            {isSignUp ? (
+              <>
+                Create an <span className="italic">account</span>
+              </>
+            ) : (
+              <>
+                Welcome <span className="italic">back</span>
+              </>
+            )}
           </h2>
           <p className="text-sm text-muted-foreground">
             {isSignUp
@@ -85,13 +91,13 @@ const Auth = () => {
         </div>
 
         {/* Tab switch buttons */}
-        <div className="grid grid-cols-2 p-1 bg-muted/55 rounded-lg border border-border/20">
+        <div className="grid grid-cols-2 rounded-full border border-border bg-muted p-1">
           <button
             type="button"
             onClick={() => setIsSignUp(false)}
-            className={`py-2 text-sm font-medium rounded-md transition-all ${
+            className={`rounded-full py-2 text-xs uppercase tracking-widest transition-all duration-300 ${
               !isSignUp
-                ? "bg-card text-foreground shadow"
+                ? "bg-card text-foreground shadow-soft"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -100,9 +106,9 @@ const Auth = () => {
           <button
             type="button"
             onClick={() => setIsSignUp(true)}
-            className={`py-2 text-sm font-medium rounded-md transition-all ${
+            className={`rounded-full py-2 text-xs uppercase tracking-widest transition-all duration-300 ${
               isSignUp
-                ? "bg-card text-foreground shadow"
+                ? "bg-card text-foreground shadow-soft"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -112,7 +118,7 @@ const Auth = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">
               Email Address
             </label>
             <div className="relative">
@@ -122,7 +128,7 @@ const Auth = () => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50"
+                className="pl-10"
                 disabled={loading}
                 required
               />
@@ -130,7 +136,7 @@ const Auth = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">
               Password
             </label>
             <div className="relative">
@@ -140,7 +146,7 @@ const Auth = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50"
+                className="pl-10"
                 disabled={loading}
                 required
               />
@@ -149,7 +155,7 @@ const Auth = () => {
 
           <Button
             type="submit"
-            className="w-full text-md py-6 shadow-md hover:shadow-lg transition-all"
+            className="w-full"
             disabled={loading}
           >
             {loading ? (

@@ -46,16 +46,16 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
       <svg width={size} height={size} className="transform -rotate-90">
         <defs>
           <linearGradient id="ringMoveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FA114F" />
-            <stop offset="100%" stopColor="#FF5277" />
+            <stop offset="0%" stopColor="#A86854" />
+            <stop offset="100%" stopColor="#C27B66" />
           </linearGradient>
           <linearGradient id="ringIntakeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF9500" />
-            <stop offset="100%" stopColor="#FFCC00" />
+            <stop offset="0%" stopColor="#C4A484" />
+            <stop offset="100%" stopColor="#DCCFC2" />
           </linearGradient>
           <linearGradient id="ringProteinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#30D158" />
-            <stop offset="100%" stopColor="#63E6E2" />
+            <stop offset="0%" stopColor="#5C6B54" />
+            <stop offset="100%" stopColor="#8C9A84" />
           </linearGradient>
 
           {/* Shadow filters for Apple Health ring depth */}
@@ -70,7 +70,7 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           cy={center}
           r={radius1}
           fill="none"
-          stroke="#FA114F"
+          stroke="#C27B66"
           strokeOpacity="0.18"
           strokeWidth={strokeWidth}
         />
@@ -96,7 +96,7 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           cy={center}
           r={radius2}
           fill="none"
-          stroke="#FF9500"
+          stroke="#C4A484"
           strokeOpacity="0.18"
           strokeWidth={strokeWidth}
         />
@@ -122,7 +122,7 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
           cy={center}
           r={radius3}
           fill="none"
-          stroke="#30D158"
+          stroke="#8C9A84"
           strokeOpacity="0.18"
           strokeWidth={strokeWidth}
         />
@@ -146,7 +146,7 @@ export const AppleHealthRings: React.FC<AppleHealthRingsProps> = ({
       {/* Center Apple Icon / Calorie Badge */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-xl">🍎</span>
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+        <span className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
           Health
         </span>
       </div>

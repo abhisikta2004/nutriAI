@@ -2,121 +2,154 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Botanical / Organic Serif
+   All colors are HSL components so Tailwind opacity modifiers keep working.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 142 25% 20%;
+    /* Warm alabaster #F9F8F4 */
+    --background: 48 33% 97%;
+    /* Deep forest #2D3A31 */
+    --foreground: 139 13% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 142 25% 20%;
+    --card-foreground: 139 13% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 142 25% 20%;
+    --popover-foreground: 139 13% 20%;
 
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 71% 55%;
+    /* Primary actions sit on deep forest */
+    --primary: 139 13% 20%;
+    --primary-foreground: 48 33% 97%;
+    --primary-glow: 98 10% 56%;
 
-    --secondary: 171 70% 50%;
-    --secondary-foreground: 0 0% 100%;
+    /* Soft clay #DCCFC2 */
+    --secondary: 30 16% 81%;
+    --secondary-foreground: 139 13% 20%;
 
-    --muted: 142 20% 95%;
-    --muted-foreground: 142 15% 45%;
+    /* Rice-paper clay #F2F0EB */
+    --muted: 42 21% 94%;
+    --muted-foreground: 120 10% 32%;
 
-    --accent: 33 100% 60%;
-    --accent-foreground: 142 25% 20%;
+    /* Terracotta #C27B66 — hover and call-to-action pops */
+    --accent: 14 43% 58%;
+    --accent-foreground: 48 33% 97%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 8 42% 42%;
+    --destructive-foreground: 48 33% 97%;
 
-    --border: 142 30% 88%;
-    --input: 142 30% 88%;
-    --ring: 142 71% 45%;
+    /* Stone #E6E2DA */
+    --border: 40 19% 88%;
+    --input: 40 19% 88%;
+    /* Sage #8C9A84 */
+    --ring: 98 10% 56%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
 
-    /* Health-focused custom tokens */
-    --health-excellent: 142 71% 45%;
-    --health-good: 85 70% 50%;
-    --health-moderate: 45 90% 55%;
-    --health-poor: 0 84% 60%;
+    --sage: 98 10% 56%;
+    --clay: 30 16% 81%;
+    --clay-soft: 42 21% 94%;
+    --stone: 40 19% 88%;
+    --terracotta: 14 43% 58%;
+    --forest: 139 13% 20%;
+    --alabaster: 48 33% 97%;
 
-    --gradient-health: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(142 20% 98%) 100%);
+    /* Earth-toned health scores: moss, sage, clay, terracotta */
+    --health-excellent: 108 14% 34%;
+    --health-good: 98 12% 42%;
+    --health-moderate: 30 32% 48%;
+    --health-poor: 14 42% 46%;
 
-    --shadow-soft: 0 2px 8px -2px hsl(142 40% 70% / 0.15);
-    --shadow-card: 0 4px 16px -4px hsl(142 40% 60% / 0.2);
-    --shadow-elevated: 0 10px 30px -10px hsl(142 40% 50% / 0.25);
+    --gradient-health: linear-gradient(135deg, hsl(var(--sage)) 0%, hsl(var(--terracotta)) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--alabaster)) 0%, hsl(var(--clay-soft)) 100%);
 
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-soft: 0 4px 6px -1px rgba(45, 58, 49, 0.05);
+    --shadow-card: 0 10px 15px -3px rgba(45, 58, 49, 0.05);
+    --shadow-elevated: 0 20px 40px -10px rgba(45, 58, 49, 0.05);
+    --shadow-hover: 0 25px 50px -12px rgba(45, 58, 49, 0.15);
 
-    --sidebar-background: 0 0% 98%;
+    --transition-smooth: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 48 33% 97%;
+    --sidebar-foreground: 139 13% 20%;
+    --sidebar-primary: 139 13% 20%;
+    --sidebar-primary-foreground: 48 33% 97%;
+    --sidebar-accent: 42 21% 94%;
+    --sidebar-accent-foreground: 139 13% 20%;
+    --sidebar-border: 40 19% 88%;
+    --sidebar-ring: 98 10% 56%;
   }
 
+  /* Light botanical palette is locked. A .dark class must not flip the garden. */
   .dark {
-    --background: 142 30% 8%;
-    --foreground: 142 20% 90%;
-
-    --card: 142 25% 12%;
-    --card-foreground: 142 20% 90%;
-
-    --popover: 142 25% 12%;
-    --popover-foreground: 142 20% 90%;
-
-    --primary: 142 71% 55%;
-    --primary-foreground: 142 30% 8%;
-    --primary-glow: 142 71% 65%;
-
-    --secondary: 171 70% 50%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 142 25% 15%;
-    --muted-foreground: 142 15% 60%;
-
-    --accent: 33 100% 60%;
-    --accent-foreground: 142 30% 8%;
-
-    --destructive: 0 62.8% 40%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 142 25% 20%;
-    --input: 142 25% 20%;
-    --ring: 142 71% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 48 33% 97%;
+    --foreground: 139 13% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 139 13% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 139 13% 20%;
+    --primary: 139 13% 20%;
+    --primary-foreground: 48 33% 97%;
+    --primary-glow: 98 10% 56%;
+    --secondary: 30 16% 81%;
+    --secondary-foreground: 139 13% 20%;
+    --muted: 42 21% 94%;
+    --muted-foreground: 120 10% 32%;
+    --accent: 14 43% 58%;
+    --accent-foreground: 48 33% 97%;
+    --destructive: 8 42% 42%;
+    --destructive-foreground: 48 33% 97%;
+    --border: 40 19% 88%;
+    --input: 40 19% 88%;
+    --ring: 98 10% 56%;
+    --sidebar-background: 48 33% 97%;
+    --sidebar-foreground: 139 13% 20%;
+    --sidebar-primary: 139 13% 20%;
+    --sidebar-primary-foreground: 48 33% 97%;
+    --sidebar-accent: 42 21% 94%;
+    --sidebar-accent-foreground: 139 13% 20%;
+    --sidebar-border: 40 19% 88%;
+    --sidebar-ring: 98 10% 56%;
   }
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-foreground;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--sage) / 0.35);
+    color: hsl(var(--foreground));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

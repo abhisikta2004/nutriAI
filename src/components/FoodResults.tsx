@@ -89,7 +89,7 @@ const AlternativeCard = ({
 
   return (
     <Card
-      className={`p-6 space-y-4 bg-gradient-to-br from-card to-muted/20 shadow-card hover:shadow-elevated transition-all hover:-translate-y-1 ${
+      className={`p-6 space-y-4 bg-card shadow-card hover:shadow-elevated transition-all hover:-translate-y-1 ${
         isBest ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
       }`}
     >
@@ -125,13 +125,13 @@ const AlternativeCard = ({
             {alt.reasons.slice(0, 3).map((r, idx) => (
               <div key={idx} className="text-xs flex items-center gap-1.5">
                 {r.status === 'better' ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                    <ArrowUp className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="inline-flex items-center gap-1 text-health-good font-medium">
+                    <ArrowUp className="h-3 w-3 shrink-0 text-health-good" />
                     {r.actualChange}
                   </span>
                 ) : r.status === 'worse' ? (
-                  <span className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
-                    <ArrowDown className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" />
+                  <span className="inline-flex items-center gap-1 text-terracotta font-medium">
+                    <ArrowDown className="h-3 w-3 shrink-0 text-terracotta" />
                     {r.actualChange}
                   </span>
                 ) : (
@@ -178,12 +178,12 @@ const AlternativeCard = ({
                     {Math.round(row.original)}{row.unit}
                   </span>
                   <span className={`text-center font-medium flex items-center justify-center gap-1 ${
-                    isBetter ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 
-                    isWorse ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-foreground'
+                    isBetter ? 'text-health-good font-semibold' : 
+                    isWorse ? 'text-terracotta font-semibold' : 'text-foreground'
                   }`}>
                     {Math.round(row.alt)}{row.unit}
-                    {isBetter && <ArrowUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />}
-                    {isWorse && <ArrowDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400 shrink-0" />}
+                    {isBetter && <ArrowUp className="h-3.5 w-3.5 text-health-good shrink-0" />}
+                    {isWorse && <ArrowDown className="h-3.5 w-3.5 text-terracotta shrink-0" />}
                   </span>
                 </div>
               );
@@ -193,11 +193,11 @@ const AlternativeCard = ({
           {/* Apple Health Ring Impact Badges */}
           {alt.nutrition.protein > 0 && (
             <div className="pt-2 border-t border-border/30 flex items-center justify-between text-[11px] font-medium text-muted-foreground flex-wrap gap-1.5">
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="flex items-center gap-1 text-health-good font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#30D158]" />
                 +{alt.nutrition.protein}g Protein (+{proteinClosure}% of Ring)
               </span>
-              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">
+              <span className="flex items-center gap-1 text-health-moderate font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#FF9500]" />
                 {alt.nutrition.calories} kcal ({calorieUsage}% Intake)
               </span>
@@ -211,7 +211,7 @@ const AlternativeCard = ({
           variant="outline"
           size="sm"
           onClick={onLogToAppleHealth}
-          className="w-full text-xs font-semibold gap-1.5 border-border/80 hover:border-red-500/40 hover:bg-red-500/10 text-foreground transition-all mt-2"
+          className="w-full text-xs font-semibold gap-1.5 border-border/80 hover:border-terracotta/40 hover:bg-terracotta/10 text-foreground transition-all mt-2"
         >
           <span>🍎</span>
           Log Alternative to Apple Health
@@ -286,23 +286,23 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Dietary Preference Conflict Warning (Veg / Vegan violation) */}
       {dietaryWarning && (
-        <Card className="p-6 bg-gradient-to-br from-amber-500/20 via-red-500/15 to-card/90 border-2 border-red-500/50 shadow-elevated backdrop-blur-md animate-in zoom-in-95 duration-300 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
+        <Card className="p-6 bg-gradient-to-br from-clay/70 via-terracotta/10 to-card border-2 border-terracotta/40 shadow-elevated backdrop-blur-md animate-in zoom-in-95 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-terracotta/10 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex items-start gap-4 relative z-10">
-            <div className="p-3.5 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-600 dark:text-red-400 shrink-0 shadow-sm animate-pulse">
+            <div className="p-3.5 rounded-2xl bg-terracotta/15 border border-terracotta/40 text-terracotta shrink-0 shadow-sm animate-pulse">
               <ShieldAlert className="h-7 w-7" />
             </div>
             
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">
+                <h3 className="text-xl font-bold text-terracotta tracking-tight">
                   Dietary Preference Alert
                 </h3>
-                <Badge variant="destructive" className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 shadow-sm">
+                <Badge variant="destructive" className="bg-terracotta hover:bg-terracotta/90 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 shadow-sm">
                   Non-Veg Detected
                 </Badge>
-                <Badge variant="outline" className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold">
+                <Badge variant="outline" className="text-xs bg-health-moderate/15 text-health-moderate border-health-moderate/40 font-semibold">
                   Profile: {profile.dietPreference?.toUpperCase() || "VEGETARIAN"}
                 </Badge>
               </div>
@@ -311,8 +311,8 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
                 {dietaryWarning}
               </p>
 
-              <div className="pt-2 border-t border-red-500/20 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              <div className="pt-2 border-t border-terracotta/30 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-health-good shrink-0" />
                 <span>We've automatically filtered the recommendations below to strictly <strong>100% Vegetarian & Vegan</strong> healthy swaps.</span>
               </div>
             </div>
@@ -322,13 +322,13 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
 
       {/* Allergen Warning */}
       {detectedAllergens.length > 0 && (
-        <Card className="p-5 bg-gradient-to-br from-red-500/10 via-red-500/5 to-amber-500/10 border-2 border-red-500/30 shadow-lg animate-in zoom-in-95 duration-300">
+        <Card className="p-5 bg-gradient-to-br from-terracotta/10 via-clay/40 to-muted border-2 border-terracotta/40 shadow-lg animate-in zoom-in-95 duration-300">
           <div className="flex items-start gap-4">
-            <div className="p-3 rounded-full bg-red-500/20 shrink-0">
-              <AlertTriangle className="h-6 w-6 text-red-500" />
+            <div className="p-3 rounded-full bg-terracotta/15 shrink-0">
+              <AlertTriangle className="h-6 w-6 text-terracotta" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-red-600 dark:text-red-400">
+              <h3 className="text-lg font-bold text-terracotta">
                 ⚠️ Allergen Warning!
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -350,20 +350,20 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
       )}
 
       {/* Identified Food Header Card */}
-      <Card className="p-6 bg-gradient-to-br from-card to-muted/20 shadow-card">
+      <Card className="p-6 bg-card shadow-card">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
               <h2 className="text-2xl font-bold text-foreground">{data.identifiedFood}</h2>
               {dietaryWarning && (
-                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold flex items-center gap-1">
+                <Badge className="bg-terracotta/15 text-terracotta border border-terracotta/40 text-xs font-bold flex items-center gap-1">
                   <ShieldAlert className="h-3.5 w-3.5" />
                   Non-Veg Item
                 </Badge>
               )}
               {isOptimal && (
-                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1">
+                <Badge className="bg-health-excellent hover:bg-health-excellent/90 text-white font-semibold flex items-center gap-1">
                   <Sparkles className="h-3.5 w-3.5" />
                   Optimal Food
                 </Badge>
@@ -441,7 +441,7 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
           <Button
             size="sm"
             onClick={handleLogOriginalMeal}
-            className="text-xs font-semibold gap-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-sm shrink-0"
+            className="shrink-0 gap-1.5"
           >
             <span>🍎</span>
             Log to Apple Health
@@ -451,7 +451,7 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
 
       {/* Optimal Food State */}
       {isOptimal ? (
-        <Card className="p-8 text-center space-y-4 bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/30 shadow-card">
+        <Card className="p-8 text-center space-y-4 bg-muted border-2 border-primary/30 shadow-card">
           <div className="inline-flex p-4 rounded-full bg-primary/20 text-primary">
             <Trophy className="h-10 w-10" />
           </div>
@@ -471,12 +471,12 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
                 <div className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-accent" />
                   <h3 className="text-xl font-bold text-foreground">Best Choice</h3>
-                  <Badge variant="secondary" className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="secondary" className="text-xs font-bold text-health-good">
                     +{bestChoice.healthScore - baselineScore} points higher
                   </Badge>
                 </div>
                 {['veg', 'vegetarian', 'vegan'].includes((profile.dietPreference || '').toLowerCase()) && (
-                  <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                  <Badge variant="outline" className="text-xs bg-health-good/15 text-health-good border-health-good/40">
                     🌱 100% Vegetarian Friendly
                   </Badge>
                 )}
@@ -504,7 +504,7 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
                   </h3>
                 </div>
                 {['veg', 'vegetarian', 'vegan'].includes((profile.dietPreference || '').toLowerCase()) && (
-                  <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                  <Badge variant="outline" className="text-xs bg-health-good/15 text-health-good border-health-good/40">
                     🌱 Vegetarian Options
                   </Badge>
                 )}

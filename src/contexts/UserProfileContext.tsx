@@ -24,10 +24,10 @@ export const calculateBMI = (weight: number, heightCm: number): number => {
 };
 
 export const getBMICategory = (bmi: number): { label: string; color: string; description: string } => {
-  if (bmi < 18.5) return { label: "Underweight", color: "text-amber-500", description: "Consider gaining healthy weight" };
-  if (bmi < 25) return { label: "Normal", color: "text-green-500", description: "Healthy weight range" };
-  if (bmi < 30) return { label: "Overweight", color: "text-amber-500", description: "Consider moderate weight loss" };
-  return { label: "Obese", color: "text-red-500", description: "Weight management recommended" };
+  if (bmi < 18.5) return { label: "Underweight", color: "text-health-moderate", description: "Consider gaining healthy weight" };
+  if (bmi < 25) return { label: "Normal", color: "text-health-excellent", description: "Healthy weight range" };
+  if (bmi < 30) return { label: "Overweight", color: "text-health-moderate", description: "Consider moderate weight loss" };
+  return { label: "Obese", color: "text-health-poor", description: "Weight management recommended" };
 };
 
 interface UserProfileContextType {

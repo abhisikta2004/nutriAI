@@ -28,9 +28,9 @@ export const AppleHealthCard: React.FC = () => {
 
   return (
     <>
-      <Card className="p-6 bg-gradient-to-br from-card via-card/95 to-red-500/5 border border-border/60 shadow-elevated hover:shadow-hover transition-all duration-300 relative overflow-hidden">
+      <Card className="p-6 bg-card border border-border/60 shadow-elevated hover:shadow-hover transition-all duration-300 relative overflow-hidden">
         {/* Subtle Ambient Apple Red Glow */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-48 h-48 bg-terracotta/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
           {/* Left: Header and Rings */}
@@ -53,7 +53,7 @@ export const AppleHealthCard: React.FC = () => {
                   <span className="text-xl">🍎</span>
                   <h3 className="text-lg font-bold text-foreground">Apple Health</h3>
                 </div>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5">
+                <Badge variant="outline" className="bg-health-good/15 text-health-good border-health-good/40 text-xs font-semibold flex items-center gap-1.5">
                   <Clock className="h-3 w-3" />
                   Last synced: {lastSyncedText}
                 </Badge>
@@ -65,11 +65,11 @@ export const AppleHealthCard: React.FC = () => {
 
               {/* Quick Metrics Badges - Steps & Kcal */}
               <div className="flex items-center gap-3 pt-1 flex-wrap text-xs font-medium">
-                <div className="flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-md">
+                <div className="flex items-center gap-1 text-terracotta bg-terracotta/10 px-2 py-0.5 rounded-md">
                   <Flame className="h-3.5 w-3.5 shrink-0" />
                   <span>{activeBurn} kcal Move</span>
                 </div>
-                <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                <div className="flex items-center gap-1 text-health-moderate bg-health-moderate/15 px-2 py-0.5 rounded-md">
                   <Footprints className="h-3.5 w-3.5 shrink-0" />
                   <span>{steps.toLocaleString()} steps</span>
                 </div>
@@ -89,7 +89,7 @@ export const AppleHealthCard: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Net Calories: <strong className={netCals > 0 ? "text-foreground" : "text-emerald-600"}>{netCals} kcal</strong> ({remainingCals} kcal remaining)
+                Net Calories: <strong className={netCals > 0 ? "text-foreground" : "text-health-good"}>{netCals} kcal</strong> ({remainingCals} kcal remaining)
               </p>
             </div>
 

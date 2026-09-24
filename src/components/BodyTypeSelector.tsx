@@ -125,11 +125,10 @@ export const BodyTypeSelector = ({ value, onChange, label }: BodyTypeSelectorPro
             key={body.type}
             onClick={() => handleSelect(body.type)}
             className={cn(
-              "flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all duration-200",
-              "border-2",
+              "flex-1 rounded-full border px-2 py-3 text-xs font-medium uppercase tracking-wider transition-all duration-500",
               value === body.type
-                ? "bg-primary text-primary-foreground border-primary shadow-lg scale-105"
-                : "bg-muted/50 text-muted-foreground border-transparent hover:border-primary/30 hover:bg-muted"
+                ? "border-primary bg-primary text-primary-foreground shadow-soft"
+                : "border-transparent bg-muted/70 text-muted-foreground hover:border-sage/40 hover:bg-muted"
             )}
           >
             {body.label}
@@ -140,7 +139,7 @@ export const BodyTypeSelector = ({ value, onChange, label }: BodyTypeSelectorPro
       {/* Progress Indicator */}
       <div className="relative h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className="absolute h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 rounded-full"
+          className="absolute h-full rounded-full bg-sage transition-all duration-700 ease-out"
           style={{
             width: `${((animatedIndex + 1) / bodyTypes.length) * 100}%`,
           }}
