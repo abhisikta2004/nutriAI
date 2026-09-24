@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, Sparkles, Heart, Brain, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Camera, Sparkles, Heart, Brain, ArrowRight, CheckCircle2, Mic } from "lucide-react";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import Header from "@/components/Header";
@@ -24,7 +24,7 @@ const Home = () => {
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full animate-pulse">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="text-sm font-semibold text-primary">
-              AI-Powered Health Intelligence
+              AI-Powered Vision & Voice Health Intelligence
             </span>
           </div>
           
@@ -38,8 +38,8 @@ const Home = () => {
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Snap a photo of your food and discover healthier alternatives instantly. 
-            Powered by Explainable AI that shows you exactly why each suggestion is better.
+            Snap a photo or speak hands-free to discover healthier alternatives instantly. 
+            Powered by Explainable AI that shows and speaks exactly why each suggestion is better.
           </p>
 
           {/* User Profile Summary */}
@@ -62,8 +62,14 @@ const Home = () => {
             <Link to="/analyze">
               <Button size="lg" className="text-lg px-8 py-6 shadow-[0_0_20px_rgba(142,71,45,0.3)] hover:shadow-[0_0_30px_rgba(142,71,45,0.5)] transition-all">
                 <Camera className="mr-2 h-5 w-5" />
-                Start Analyzing
+                Scan Food Photo
                 <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/analyze">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-primary/40 bg-card/80 hover:bg-primary/10 transition-all">
+                <Mic className="mr-2 h-5 w-5 text-primary" />
+                Talk to Voice Advisor
               </Button>
             </Link>
           </div>
@@ -72,42 +78,51 @@ const Home = () => {
 
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <Card className="p-8 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Camera className="h-7 w-7 text-primary" />
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Camera className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground">Instant Analysis</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Simply upload a photo of any food item and get comprehensive nutritional 
-                analysis in seconds using advanced AI vision technology.
+              <h3 className="text-xl font-bold text-foreground">Vision AI Scanner</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Snap or upload any meal photo. Identifies foods and extracts USDA-level nutritional parameters in seconds.
               </p>
             </div>
           </Card>
 
-          <Card className="p-8 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
+          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center">
-                <Heart className="h-7 w-7 text-secondary" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <Mic className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground">Personalized Suggestions</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Get healthier alternatives filtered by your diet preference ({profile.dietPreference}) 
-                and allergies. Tailored to your body goals.
+              <h3 className="text-xl font-bold text-foreground">Conversational Voice</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Hands-free voice assistant. Speak what you're eating and hear natural spoken recommendations with conversational pauses.
               </p>
             </div>
           </Card>
 
-          <Card className="p-8 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
+          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
             <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
-                <Brain className="h-7 w-7 text-accent" />
+              <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center">
+                <Heart className="h-6 w-6 text-secondary" />
               </div>
-              <h3 className="text-2xl font-bold text-foreground">Explainable AI</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Understand exactly why each recommendation is better with weighted nutrient contribution 
-                analysis showing calorie, protein, and nutrient comparisons.
+              <h3 className="text-xl font-bold text-foreground">Goal Personalization</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Alternatives calibrated to your target body goal ({profile.targetBodyType}), diet preference, and allergens.
+              </p>
+            </div>
+          </Card>
+
+          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center">
+                <Brain className="h-6 w-6 text-accent" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Explainable AI</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Transparent linear ML regression coefficients show precisely what nutrient differences raised or lowered your score.
               </p>
             </div>
           </Card>

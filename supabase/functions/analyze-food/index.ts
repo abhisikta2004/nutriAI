@@ -6,7 +6,7 @@ import {
   NutritionInfo,
   Alternative
 } from "./types.ts";
-import { identifyFoodWithAI } from "./llm.ts";
+import { identifyFoodWithAI, identifyFoodFromVoiceQuery, generateSpokenExplanation } from "./llm.ts";
 import { calculateHealthScore } from "./scoring.ts";
 import { getHealthierAlternatives } from "./alternatives.ts";
 import { detectAllergens } from "./allergens.ts";
@@ -34,15 +34,24 @@ serve(async (req) => {
       );
     }
 
-    const { image, identifyOnly, detailedLog, userProfile } = parseResult.data;
+    const { image, voiceQuery, identifyOnly, detailedLog, userProfile } = parseResult.data;
     const dietPreference = userProfile?.dietPreference || 'non-veg';
     const allergies = userProfile?.allergies || [];
     const targetBodyType = userProfile?.targetBodyType || 'athletic';
 
     console.log(`Analyzing food with preferences - Diet: ${dietPreference}, Target: ${targetBodyType}, Allergies: ${JSON.stringify(allergies)}`);
 
-    // 1. Vision LLM Identification and initial nutrition extraction
-    const identified = await identifyFoodWithAI(image);
+    // 1. Identification and initial nutrition extraction (Image Vision or Spoken Voice Query)
+    let identified;
+    if (voiceQuery && voiceQuery.trim().length > 0) {
+      console.log('Using voice query processor for:', voiceQuery);
+      identified = await identifyFoodFromVoiceQuery(voiceQuery.trim());
+    } else if (image) {
+      identified = await identifyFoodWithAI(image);
+    } else {
+      throw new Error('Please provide a food photo or spoken food description.');
+    }
+
     console.log('Food identified:', identified.name);
     console.log('Base nutrition per 100g:', JSON.stringify(identified.nutrition));
 
@@ -135,7 +144,16 @@ serve(async (req) => {
     // Food is already optimal if no alternative beats baseline by the margin threshold
     const alreadyOptimal = filteredAlternatives.length === 0;
 
-    // 8. Assemble final response
+    // 8. Generate natural conversational spoken response script with human-like pauses
+    const spokenResponse = generateSpokenExplanation(
+      identified.name,
+      Math.round(baselineScore),
+      targetBodyType,
+      bestChoice,
+      alreadyOptimal
+    );
+
+    // 9. Assemble final response
     const result: AnalyzeResponse = {
       identifiedFood: identified.name,
       confidence: identified.confidence,
@@ -162,7 +180,8 @@ serve(async (req) => {
       alternatives: filteredAlternatives,
       alreadyOptimal,
       bestChoice,
-      allergenWarning: allergenWarning.length > 0 ? allergenWarning : undefined
+      allergenWarning: allergenWarning.length > 0 ? allergenWarning : undefined,
+      spokenResponse
     };
 
     console.log('Analysis complete. Alternatives returned:', filteredAlternatives.length, 'Already optimal:', alreadyOptimal);

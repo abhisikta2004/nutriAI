@@ -37,11 +37,15 @@ export const UserProfileSchema = z.object({
 }).passthrough();
 
 export const AnalyzeRequestSchema = z.object({
-  image: z.string().min(1, 'Image data is required'),
+  image: z.string().optional(),
+  voiceQuery: z.string().optional(),
   identifyOnly: z.boolean().optional().default(false),
   detailedLog: DetailedLogSchema.nullable().optional(),
   userProfile: UserProfileSchema.nullable().optional(),
-}).passthrough();
+}).passthrough().refine(
+  (data) => !!data.image || !!data.voiceQuery,
+  { message: "Either an image or a voiceQuery must be provided" }
+);
 
 // Inferred TypeScript types from Zod schemas
 export type AnalyzeRequest = z.infer<typeof AnalyzeRequestSchema>;
@@ -111,4 +115,5 @@ export interface AnalyzeResponse {
   alreadyOptimal?: boolean;
   bestChoice?: Alternative | null;
   allergenWarning?: string[];
+  spokenResponse?: string;
 }

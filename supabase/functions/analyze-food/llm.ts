@@ -326,3 +326,117 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
     nutrition: nutrition
   };
 }
+
+/**
+ * Identify food and nutritional parameters from spoken natural language text.
+ * Allows users to converse verbally (e.g. "I'm having a chicken shawarma roll with garlic sauce").
+ */
+export async function identifyFoodFromVoiceQuery(query: string): Promise<IdentifiedFood> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_API_KEY');
+
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
+  }
+
+  console.log('Analyzing spoken voice food query with Gemini AI:', query);
+
+  const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest'];
+  let contentText = '';
+  let success = false;
+
+  for (const model of models) {
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `${SYSTEM_INSTRUCTION}
+
+The user said the following food/meal via voice:
+"${query}"
+
+Identify the primary food item described, and provide accurate nutritional values per 100g in JSON format.`
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json",
+            maxOutputTokens: 800
+          }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        if (contentText) {
+          success = true;
+          break;
+        }
+      }
+    } catch (err) {
+      console.warn(`Voice query model ${model} failed:`, err);
+    }
+  }
+
+  if (!success || !contentText) {
+    throw new Error('Could not analyze your spoken food. Please try speaking clearly or typing the food name.');
+  }
+
+  const extracted = extractJsonCandidate(contentText);
+  if (!extracted) {
+    throw new Error('Could not extract nutritional profile from spoken query.');
+  }
+
+  const identified = JSON.parse(extracted);
+  const rawNutrition = identified.nutrition || identified.nutritionPer100g || identified;
+
+  const nutrition = {
+    calories: toNumber(rawNutrition.calories || rawNutrition.energy, 160),
+    protein: toNumber(rawNutrition.protein || rawNutrition.proteins, 5),
+    carbs: toNumber(rawNutrition.carbs || rawNutrition.carbohydrates, 20),
+    fat: toNumber(rawNutrition.fat || rawNutrition.fats, 5),
+    saturatedFat: toNumber(rawNutrition.saturatedFat, 1),
+    sugar: toNumber(rawNutrition.sugar || rawNutrition.sugars, 3),
+    fiber: toNumber(rawNutrition.fiber || rawNutrition.fibers, 2),
+    sodium: toNumber(rawNutrition.sodium, 250),
+    processingLevel: toNumber(rawNutrition.processingLevel, 0.4),
+  };
+
+  const foodName = String(identified.name || query).trim();
+
+  return {
+    name: foodName,
+    confidence: toNumber(identified.confidence, 0.95),
+    nutrition
+  };
+}
+
+/**
+ * Generate natural human-like spoken explanation with cadence, pauses (...), and encouraging tone.
+ */
+export function generateSpokenExplanation(
+  foodName: string,
+  baselineScore: number,
+  targetBodyType: string,
+  bestChoice: any | null,
+  alreadyOptimal: boolean
+): string {
+  const goal = (targetBodyType || 'athletic').replace('_', ' ');
+
+  if (alreadyOptimal || !bestChoice) {
+    return `That's a fantastic choice! ... Based on our nutritional model for your ${goal} goal, ${foodName} scores ${baselineScore} out of 100. ... It has a clean, well-balanced nutrient profile with minimal empty calories. ... No healthier swaps are needed in our database, so go right ahead and enjoy your meal!`;
+  }
+
+  const scoreGain = bestChoice.healthScore - baselineScore;
+  const topBenefit = bestChoice.reasons?.[0]?.actualChange || bestChoice.benefits?.[0] || 'higher protein and cleaner macros';
+
+  return `Got it! Let me check that for you. ... ${foodName} currently scores around ${baselineScore} out of 100 for your ${goal} goal. ... Here is a great swap: ... I recommend trying ${bestChoice.name}, which boosts your health score to ${bestChoice.healthScore}, a gain of ${scoreGain} points! ... It provides ${topBenefit}. ... Would you like to check out this alternative?`;
+}
