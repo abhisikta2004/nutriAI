@@ -1,6 +1,6 @@
 import { NutritionInfo, AlternativeReason } from "./types.ts";
 import { LinearRegressionModel } from "./model.ts";
-import { getGoalMultipliers, toNumber } from "./scoring.ts";
+import { getGoalTransitionMultipliers, toNumber } from "./scoring.ts";
 
 export const FEATURE_SPECS = [
   { key: 'calories', name: 'Calories', scale: 600, unit: 'kcal', defaultBetter: 'lower' },
@@ -21,18 +21,13 @@ export const FEATURE_SPECS = [
  * prediction gap between a candidate alternative and baseline food is:
  *   contribution_i = effective_weight_i * (candidate_scaled_i - baseline_scaled_i)
  * where effective_weight_i = model.weights[i] * goal_multiplier_i.
- * 
- * Positive contributions represent features where the alternative improved upon baseline (raising the score);
- * negative contributions represent trade-offs (lowering the score).
- * Features are ranked by absolute contribution |contribution_i| to provide honest, transparent explanations.
- * 
- * If the model failed to train, a documented rule-based fallback comparison is used.
  */
 export function calculateFeatureImportance(
   baseline: NutritionInfo, 
   alternative: NutritionInfo, 
   model: LinearRegressionModel | null,
-  targetBodyType: string = 'athletic'
+  targetBodyType: string = 'athletic',
+  currentBodyType: string = 'average'
 ): AlternativeReason[] {
   const getRawValues = (nutrition: NutritionInfo) => ({
     calories: toNumber(nutrition.calories, 0),
@@ -51,7 +46,7 @@ export function calculateFeatureImportance(
 
   // Primary path: Linear model feature contribution calculation
   if (model && model.weights && model.weights.length >= 9) {
-    const multipliers = getGoalMultipliers(targetBodyType);
+    const multipliers = getGoalTransitionMultipliers(targetBodyType, currentBodyType);
     
     const contributions = FEATURE_SPECS.map((spec, i) => {
       const bVal = baseRaw[spec.key as keyof typeof baseRaw];
@@ -88,7 +83,7 @@ export function calculateFeatureImportance(
           actualChange = rawDiff < 0 ? `${Math.round(absDiff)} fewer calories` : `${Math.round(absDiff)} more calories`;
           explanation = rawDiff < 0
             ? "Fewer calories reduce calorie surplus and support body composition goals"
-            : "Provides additional caloric energy tailored to muscle recovery";
+            : "Provides additional caloric energy tailored to weight and muscle gain";
         } else if (spec.key === 'protein') {
           actualChange = `${formattedDiff} more protein`;
           explanation = "Higher protein actively promotes muscle repair, metabolic rate, and satiety";
@@ -105,11 +100,11 @@ export function calculateFeatureImportance(
           actualChange = `${formattedDiff} less sodium`;
           explanation = "Lower sodium helps maintain balanced blood pressure and reduces water retention";
         } else if (spec.key === 'fat') {
-          actualChange = `${formattedDiff} less fat`;
-          explanation = "Lower total fat reduces overall caloric density";
+          actualChange = rawDiff > 0 ? `${formattedDiff} more healthy fat` : `${formattedDiff} less fat`;
+          explanation = rawDiff > 0 ? "Provides dense healthy fats for mass building" : "Lower total fat reduces overall caloric density";
         } else if (spec.key === 'carbs') {
-          actualChange = `${formattedDiff} fewer carbs`;
-          explanation = "Lower carbohydrate content supports glycemic control";
+          actualChange = rawDiff > 0 ? `${formattedDiff} more energizing carbs` : `${formattedDiff} fewer carbs`;
+          explanation = rawDiff > 0 ? "Supplies complex carbohydrate energy for mass gain" : "Lower carbohydrate content supports glycemic control";
         } else if (spec.key === 'processingLevel') {
           actualChange = "Less processed";
           explanation = "Less processed ingredients retain higher natural micronutrient density";
@@ -173,7 +168,7 @@ export function calculateFeatureImportance(
     }));
   }
 
-  // Fallback path: Documented rule-based comparison when ML model is unavailable
+  // Fallback path
   return FEATURE_SPECS.map(spec => {
     const rawDiff = altRaw[spec.key as keyof typeof altRaw] - baseRaw[spec.key as keyof typeof baseRaw];
     const isImprovement = (spec.defaultBetter === 'lower' && rawDiff < 0) || (spec.defaultBetter === 'higher' && rawDiff > 0);

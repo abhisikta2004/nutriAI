@@ -17,18 +17,11 @@ class UserProfileInput(BaseModel):
     dietPreference: Optional[str] = "non-veg"
     allergies: Optional[List[str]] = Field(default_factory=list)
     targetBodyType: Optional[str] = "athletic"
-    currentBodyType: Optional[str] = None
+    currentBodyType: Optional[str] = "average"
     weight: Optional[Union[float, int, str]] = None
     height: Optional[Union[float, int, str]] = None
     age: Optional[Union[float, int, str]] = None
     hasCompletedOnboarding: Optional[bool] = None
-
-class AnalyzeRequest(BaseModel):
-    image: Optional[str] = None
-    voiceQuery: Optional[str] = None
-    identifyOnly: Optional[bool] = False
-    detailedLog: Optional[DetailedLogInput] = None
-    userProfile: Optional[UserProfileInput] = None
 
 class NutritionInfo(BaseModel):
     calories: float
@@ -71,6 +64,13 @@ class NutritionResponse(BaseModel):
     fiber: float
     sodium: int
 
+class AnalyzeRequest(BaseModel):
+    image: Optional[str] = None
+    voiceQuery: Optional[str] = None
+    identifyOnly: Optional[bool] = False
+    detailedLog: Optional[DetailedLogInput] = None
+    userProfile: Optional[UserProfileInput] = None
+
 class AnalyzeResponse(BaseModel):
     identifiedFood: str
     confidence: float
@@ -89,4 +89,23 @@ class AnalyzeResponse(BaseModel):
     alreadyOptimal: Optional[bool] = False
     bestChoice: Optional[Alternative] = None
     allergenWarning: Optional[List[str]] = None
+    dietaryWarning: Optional[str] = None
     spokenResponse: Optional[str] = None
+
+class CompareFoodsRequest(BaseModel):
+    foodA_name: str
+    foodA_nutrition: NutritionInfo
+    foodB_name: str
+    foodB_nutrition: NutritionInfo
+    targetBodyType: Optional[str] = "athletic"
+    currentBodyType: Optional[str] = "average"
+
+class CompareFoodsResponse(BaseModel):
+    foodA_name: str
+    foodA_score: int
+    foodB_name: str
+    foodB_score: int
+    scoreDifference: int
+    winner: str
+    reasons: List[AlternativeReason]
+    targetBodyType: str

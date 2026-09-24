@@ -1,5 +1,6 @@
 import os
 import uvicorn
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any, Optional, List
@@ -8,23 +9,39 @@ from .models import (
     AnalyzeRequest, 
     AnalyzeResponse, 
     NutritionResponse, 
-    NutritionInfo
+    NutritionInfo,
+    CompareFoodsRequest,
+    CompareFoodsResponse
 )
 from .llm import (
     identify_food_with_ai, 
     identify_food_from_voice_query, 
     generate_spoken_explanation
 )
-from .scoring import calculate_health_score
-from .model import ensure_model_trained, train_health_score_model, get_benchmark_training_data, normalize_features
+from .scoring import calculate_health_score, calculate_health_score_sync
+from .model import (
+    get_trained_model,
+    ensure_model_trained, 
+    train_health_score_model, 
+    get_benchmark_training_data, 
+    normalize_features
+)
 from .alternatives import get_healthier_alternatives
-from .allergens import detect_allergens
+from .allergens import detect_allergens, detect_dietary_conflict
 from .detailed_log import process_detailed_log
+from .explain import calculate_feature_importance
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-train / warmup the ML model on startup
+    get_trained_model()
+    yield
 
 app = FastAPI(
     title="NutriAI Food Health Advisor API",
     description="Explainable AI Food Health Analysis, Macro Estimation & Conversational Voice Advisor in Python",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for frontend integrations
@@ -41,9 +58,9 @@ def health_check():
     return {"status": "healthy", "service": "NutriAI-Python-Engine"}
 
 @app.get("/model-info")
-async def get_model_info():
+def get_model_info():
     """Retrieve current ML model parameters, weights, and evaluation metrics."""
-    model = await ensure_model_trained()
+    model = get_trained_model()
     dataset = get_benchmark_training_data()
     features, labels = normalize_features(dataset)
     metrics = model.evaluate(features, labels)
@@ -55,27 +72,66 @@ async def get_model_info():
     }
 
 @app.post("/predict-score")
-async def predict_health_score(nutrition: NutritionInfo, target_body_type: Optional[str] = "athletic"):
-    """Directly calculate explainable health score for given nutritional parameters."""
-    score = await calculate_health_score(nutrition, target_body_type or "athletic")
+def predict_health_score(
+    nutrition: NutritionInfo, 
+    target_body_type: Optional[str] = "athletic",
+    current_body_type: Optional[str] = "average"
+):
+    """Directly calculate explainable health score for given nutritional parameters and body goal transition."""
+    score = calculate_health_score_sync(nutrition, target_body_type or "athletic", current_body_type or "average")
     return {
         "healthScore": score,
         "targetBodyType": target_body_type,
+        "currentBodyType": current_body_type,
         "nutrition": nutrition
     }
 
 @app.post("/train-model")
-async def train_model_endpoint():
-    """Re-train the Linear Regression model on latest benchmark and curated dataset."""
-    model = train_health_score_model()
+def train_model_endpoint(use_closed_form: bool = True):
+    """Re-train the Linear Regression model on benchmark and curated datasets."""
+    model = train_health_score_model(use_closed_form=use_closed_form)
     dataset = get_benchmark_training_data()
     features, labels = normalize_features(dataset)
     metrics = model.evaluate(features, labels)
     return {
         "status": "success",
-        "message": "Model successfully retrained via gradient descent",
+        "message": "Model successfully retrained",
         "metrics": metrics
     }
+
+@app.post("/compare-foods", response_model=CompareFoodsResponse)
+def compare_foods_endpoint(request: CompareFoodsRequest):
+    """Side-by-side Explainable AI comparison between two food profiles with exact feature deltas."""
+    target_goal = request.targetBodyType or "athletic"
+    current_body = request.currentBodyType or "average"
+    model = get_trained_model()
+
+    score_a = calculate_health_score_sync(request.foodA_nutrition, target_goal, current_body)
+    score_b = calculate_health_score_sync(request.foodB_nutrition, target_goal, current_body)
+
+    int_score_a = int(round(score_a))
+    int_score_b = int(round(score_b))
+
+    reasons = calculate_feature_importance(
+        baseline=request.foodA_nutrition,
+        alternative=request.foodB_nutrition,
+        model=model,
+        target_body_type=target_goal,
+        current_body_type=current_body
+    )
+
+    winner = request.foodB_name if int_score_b > int_score_a else (request.foodA_name if int_score_a > int_score_b else "Tie")
+
+    return CompareFoodsResponse(
+        foodA_name=request.foodA_name,
+        foodA_score=int_score_a,
+        foodB_name=request.foodB_name,
+        foodB_score=int_score_b,
+        scoreDifference=abs(int_score_b - int_score_a),
+        winner=winner,
+        reasons=reasons,
+        targetBodyType=target_goal
+    )
 
 @app.post("/analyze-food", response_model=AnalyzeResponse)
 async def analyze_food(request: AnalyzeRequest):
@@ -90,6 +146,7 @@ async def analyze_food(request: AnalyzeRequest):
     diet_preference = user_profile.dietPreference if user_profile and user_profile.dietPreference else "non-veg"
     allergies = user_profile.allergies if user_profile and user_profile.allergies else []
     target_body_type = user_profile.targetBodyType if user_profile and user_profile.targetBodyType else "athletic"
+    current_body_type = user_profile.currentBodyType if user_profile and user_profile.currentBodyType else "average"
 
     try:
         # 1. Identification (Vision or Voice)
@@ -118,32 +175,29 @@ async def analyze_food(request: AnalyzeRequest):
                 )
             )
 
-        # 2. Baseline nutrition & health score
+        # 2. Baseline nutrition & health score with transition multipliers
         baseline_nutrition = identified.nutrition
-        baseline_score = await calculate_health_score(baseline_nutrition, target_body_type)
+        baseline_score = calculate_health_score_sync(baseline_nutrition, target_body_type, current_body_type)
 
-        # 3. Search for healthier alternatives (>3 pts better)
+        # 3. Search for healthier alternatives (>2 pts better, matching diet preference)
         raw_alternatives = await get_healthier_alternatives(
             {
                 "identifiedFood": identified.name,
                 "nutritionInfo": baseline_nutrition
             },
             baseline_score,
-            target_body_type
+            target_body_type,
+            current_body_type,
+            diet_preference
         )
 
-        # 4. Filter alternatives by diet and allergies
+        # 4. Filter alternatives strictly by diet preference and allergies
         filtered_alternatives = []
         for alt in raw_alternatives:
-            alt_name = alt.name.lower()
-            if diet_preference == 'vegan':
-                if any(x in alt_name for x in ['chicken', 'meat', 'fish', 'egg', 'milk', 'dairy', 'yogurt', 'cheese', 'butter', 'honey']):
-                    continue
-            elif diet_preference == 'vegetarian':
-                if any(x in alt_name for x in ['chicken', 'meat', 'fish', 'mutton', 'beef', 'pork', 'prawn', 'shrimp']):
-                    continue
+            if detect_dietary_conflict(alt.name, diet_preference) is not None:
+                continue
 
-            if any(allergy.lower() in alt_name for allergy in allergies):
+            if any(allergy.lower() in alt.name.lower() for allergy in allergies):
                 continue
 
             filtered_alternatives.append(alt)
@@ -151,8 +205,9 @@ async def analyze_food(request: AnalyzeRequest):
         # 5. Process detailed logs (weights, pieces, custom ingredients)
         detailed_result = process_detailed_log(identified, request.detailedLog)
 
-        # 6. Allergen detection
+        # 6. Allergen & Dietary Conflict detection
         allergen_warning = detect_allergens(identified.name, allergies)
+        dietary_warning = detect_dietary_conflict(identified.name, diet_preference)
 
         # 7. Select best choice and detect already-optimal state
         best_choice = None
@@ -160,7 +215,7 @@ async def analyze_food(request: AnalyzeRequest):
             sorted_alts = sorted(filtered_alternatives, key=lambda x: x.healthScore, reverse=True)
             best_choice = sorted_alts[0]
 
-        already_optimal = len(filtered_alternatives) == 0
+        already_optimal = len(filtered_alternatives) == 0 and not dietary_warning
 
         # 8. Generate conversational spoken response
         spoken_response = generate_spoken_explanation(
@@ -168,7 +223,8 @@ async def analyze_food(request: AnalyzeRequest):
             int(round(baseline_score)),
             target_body_type,
             best_choice,
-            already_optimal
+            already_optimal,
+            dietary_warning
         )
 
         n = identified.nutrition
@@ -199,6 +255,7 @@ async def analyze_food(request: AnalyzeRequest):
             alreadyOptimal=already_optimal,
             bestChoice=best_choice,
             allergenWarning=allergen_warning if allergen_warning else None,
+            dietaryWarning=dietary_warning,
             spokenResponse=spoken_response
         )
 

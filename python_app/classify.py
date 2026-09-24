@@ -5,39 +5,43 @@ def get_food_category(food_name: str, ingredients: str = '') -> str:
     ing = ingredients.lower()
     
     # Sweet/Dessert items
-    if any(k in name for k in ['chocolate', 'candy', 'cookie', 'cake', 'ice cream', 'dessert', 'sweet', 'brownie', 'pastry', 'muffin', 'donut']) or ('sugar' in ing and 'cocoa' in ing):
+    if any(k in name for k in [
+        'chocolate', 'candy', 'cookie', 'cake', 'ice cream', 'dessert', 'sweet', 'brownie', 
+        'pastry', 'muffin', 'donut', 'gulab jamun', 'rasgulla', 'jalebi', 'ladoo', 'barfi', 
+        'halwa', 'kheer', 'kulfi', 'rasmalai', 'peda', 'mysore pak'
+    ]) or ('sugar' in ing and 'cocoa' in ing):
         return 'sweet'
         
     # Salty snacks
-    if any(k in name for k in ['chip', 'crisp', 'cracker', 'pretzel', 'popcorn', 'snack', 'namkeen', 'mixture']):
+    if any(k in name for k in ['chip', 'crisp', 'cracker', 'pretzel', 'popcorn', 'snack', 'namkeen', 'mixture', 'bhujia', 'sev', 'makhana']):
         return 'salty-snack'
         
     # Beverages
-    if any(k in name for k in ['soda', 'juice', 'drink', 'cola', 'beverage', 'tea', 'coffee', 'milkshake', 'smoothie']):
+    if any(k in name for k in ['soda', 'juice', 'drink', 'cola', 'beverage', 'tea', 'coffee', 'milkshake', 'smoothie', 'lassi', 'chaas']):
         return 'beverage'
         
     # Fried foods
-    if any(k in name for k in ['fried', 'fries', 'nugget', 'tempura', 'pakora', 'samosa', 'bhaji', 'vada']):
+    if any(k in name for k in ['fried', 'fries', 'nugget', 'tempura', 'pakora', 'pakoda', 'samosa', 'bhaji', 'vada', 'kachori', 'poori', 'bhatura']):
         return 'fried'
         
     # Fast food
-    if any(k in name for k in ['burger', 'pizza', 'sandwich', 'hot dog', 'wrap', 'taco']):
+    if any(k in name for k in ['burger', 'pizza', 'sandwich', 'hot dog', 'wrap', 'taco', 'roll', 'frankie']):
         return 'fast-food'
         
     # Main meals - rice/grain based
-    if any(k in name for k in ['rice', 'biryani', 'pulao', 'fried rice', 'khichdi']):
+    if any(k in name for k in ['rice', 'biryani', 'pulao', 'fried rice', 'khichdi', 'curd rice']):
         return 'rice-dish'
         
     # Curry/gravy dishes
-    if any(k in name for k in ['curry', 'masala', 'korma', 'tikka', 'butter chicken', 'paneer']):
+    if any(k in name for k in ['curry', 'masala', 'korma', 'tikka', 'butter chicken', 'paneer', 'dal', 'sambar', 'rajma', 'chole']):
         return 'curry'
         
     # Pasta/Noodles
-    if any(k in name for k in ['pasta', 'noodle', 'spaghetti', 'lasagna', 'chow mein', 'hakka']):
+    if any(k in name for k in ['pasta', 'noodle', 'spaghetti', 'lasagna', 'chow mein', 'hakka', 'maggi']):
         return 'pasta-noodles'
         
     # Breakfast items
-    if any(k in name for k in ['cereal', 'oatmeal', 'pancake', 'waffle', 'idli', 'dosa', 'poha', 'upma', 'paratha']):
+    if any(k in name for k in ['cereal', 'oatmeal', 'pancake', 'waffle', 'idli', 'dosa', 'poha', 'upma', 'paratha', 'chilla', 'uttapam']):
         return 'breakfast'
         
     return 'general'
@@ -48,7 +52,7 @@ def detect_meal_type(food_name: str) -> str:
     # Breakfast items
     if any(k in name for k in [
         'cereal', 'oatmeal', 'porridge', 'pancake', 'waffle', 'toast', 'egg', 'bacon', 
-        'sausage', 'paratha', 'idli', 'dosa', 'poha', 'upma', 'cornflakes', 'muesli', 'granola', 'breakfast'
+        'sausage', 'paratha', 'idli', 'dosa', 'poha', 'upma', 'cornflakes', 'muesli', 'granola', 'breakfast', 'chilla', 'uttapam'
     ]):
         return 'breakfast'
         

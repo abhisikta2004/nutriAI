@@ -13,26 +13,42 @@ export const mealTypeAlternatives: Record<string, CuratedItem[]> = {
       nutrition: { calories: 140, protein: 9, carbs: 18, fat: 4, saturatedFat: 0.5, sugar: 2, fiber: 4, sodium: 220, vitamins: 0.7, processingLevel: 0.2 }
     },
     {
-      name: "Oats Upma with Vegetables",
+      name: "Tofu Scramble with Spinach & Whole Grain Toast",
+      nutrition: { calories: 165, protein: 15, carbs: 14, fat: 6, saturatedFat: 0.8, sugar: 2, fiber: 4.5, sodium: 240, vitamins: 0.8, processingLevel: 0.2 }
+    },
+    {
+      name: "Oats Upma with Fresh Vegetables",
       nutrition: { calories: 180, protein: 6, carbs: 30, fat: 5, saturatedFat: 0.8, sugar: 2, fiber: 5, sodium: 320, vitamins: 0.7, processingLevel: 0.2 }
     },
     {
       name: "Egg White Omelette with Spinach",
-      nutrition: { calories: 120, protein: 18, carbs: 4, fat: 3, saturatedFat: 1, sugar: 1, fiber: 2, sodium: 280, vitamins: 0.9, processingLevel: 0.2 }
+      nutrition: { calories: 120, protein: 18, carbs: 4, fat: 3, saturatedFat: 0.8, sugar: 1, fiber: 2, sodium: 280, vitamins: 0.9, processingLevel: 0.2 }
     },
     {
-      name: "Ragi Porridge with Nuts",
+      name: "Ragi Porridge with Almonds & Walnuts",
       nutrition: { calories: 160, protein: 5, carbs: 28, fat: 4, saturatedFat: 0.5, sugar: 3, fiber: 6, sodium: 15, vitamins: 0.8, processingLevel: 0.1 }
     }
   ],
   'lunch-dinner': [
     {
-      name: "Grilled Tandoori Chicken with Salad",
-      nutrition: { calories: 220, protein: 32, carbs: 6, fat: 8, saturatedFat: 2, sugar: 2, fiber: 3, sodium: 380, vitamins: 0.8, processingLevel: 0.3 }
+      name: "Paneer Tikka with Mint Salad & Multigrain Roti",
+      nutrition: { calories: 270, protein: 18, carbs: 26, fat: 11, saturatedFat: 3.5, sugar: 2, fiber: 5.5, sodium: 340, vitamins: 0.8, processingLevel: 0.2 }
     },
     {
-      name: "Dal Tadka with Brown Rice",
+      name: "Tofu & Broccoli Stir-Fry with Quinoa",
+      nutrition: { calories: 215, protein: 19, carbs: 20, fat: 7, saturatedFat: 1.0, sugar: 3, fiber: 6.2, sodium: 260, vitamins: 0.9, processingLevel: 0.2 }
+    },
+    {
+      name: "Dal Tadka with Steamed Brown Rice",
       nutrition: { calories: 280, protein: 14, carbs: 45, fat: 5, saturatedFat: 0.8, sugar: 3, fiber: 10, sodium: 420, vitamins: 0.8, processingLevel: 0.2 }
+    },
+    {
+      name: "Palak Paneer with Multigrain Chapati",
+      nutrition: { calories: 290, protein: 16, carbs: 30, fat: 12, saturatedFat: 4.0, sugar: 2.5, fiber: 7.0, sodium: 360, vitamins: 0.8, processingLevel: 0.2 }
+    },
+    {
+      name: "Grilled Tandoori Chicken with Salad",
+      nutrition: { calories: 220, protein: 32, carbs: 6, fat: 8, saturatedFat: 2.0, sugar: 2, fiber: 3, sodium: 380, vitamins: 0.8, processingLevel: 0.3 }
     },
     {
       name: "Grilled Fish with Steamed Vegetables",
@@ -40,7 +56,7 @@ export const mealTypeAlternatives: Record<string, CuratedItem[]> = {
     },
     {
       name: "Chicken Tikka with Multigrain Roti",
-      nutrition: { calories: 300, protein: 28, carbs: 28, fat: 9, saturatedFat: 2, sugar: 2, fiber: 4, sodium: 450, vitamins: 0.7, processingLevel: 0.3 }
+      nutrition: { calories: 310, protein: 28, carbs: 28, fat: 9, saturatedFat: 2.0, sugar: 2, fiber: 4, sodium: 450, vitamins: 0.7, processingLevel: 0.3 }
     }
   ]
 };

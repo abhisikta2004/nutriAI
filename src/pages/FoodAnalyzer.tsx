@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FoodScanner } from "@/components/FoodScanner";
 import { VoiceAdvisor } from "@/components/VoiceAdvisor";
 import { FoodResults } from "@/components/FoodResults";
+import { AppleHealthCard } from "@/components/AppleHealthCard";
 import { Utensils, Brain, ArrowLeft, Camera, Mic, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -41,7 +42,7 @@ const FoodAnalyzer = () => {
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
             Scan a photo or talk hands-free in natural voice to get instant healthier alternatives 
-            powered by Explainable AI.
+            calibrated with your Apple Health activity & targets.
           </p>
 
           {/* Mode Switcher Tabs */}
@@ -72,6 +73,11 @@ const FoodAnalyzer = () => {
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Live Apple Health Activity Card */}
+        <div className="max-w-4xl mx-auto">
+          <AppleHealthCard />
         </div>
 
         {/* Input Interface based on Selected Mode */}

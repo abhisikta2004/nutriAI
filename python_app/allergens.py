@@ -1,4 +1,5 @@
-from typing import List, Dict
+import re
+from typing import List, Dict, Optional
 
 ALLERGEN_KEYWORDS: Dict[str, List[str]] = {
     'dairy': ['milk', 'cheese', 'butter', 'cream', 'yogurt', 'paneer', 'ghee', 'whey', 'casein', 'lactose', 'curd', 'kheer', 'kulfi', 'lassi', 'raita', 'malai', 'rabri', 'basundi', 'ice cream', 'milkshake', 'latte', 'cappuccino', 'mozzarella', 'cheddar', 'parmesan', 'ricotta'],
@@ -67,6 +68,25 @@ FOOD_ALLERGEN_MAP: Dict[str, List[str]] = {
     'pancake': ['eggs', 'wheat', 'dairy'],
 }
 
+NON_VEG_INDICATORS = [
+    'chicken', 'mutton', 'lamb', 'beef', 'pork', 'bacon', 'ham', 'sausage', 'meat',
+    'fish', 'salmon', 'tuna', 'pomfret', 'rohu', 'hilsa', 'surmai', 'bangda', 'rawas', 'cod', 'tilapia', 'seafood',
+    'prawn', 'shrimp', 'crab', 'lobster', 'squid', 'calamari', 'octopus', 'jhinga', 'kolambi',
+    'egg', 'eggs', 'omelette', 'omelet', 'egg bhurji', 'egg curry',
+    'duck', 'turkey', 'poultry', 'pepperoni', 'prosciutto', 'salami',
+    'chicken tikka', 'mutton tikka', 'fish tikka', 'chicken kebab', 'mutton kebab', 
+    'seekh kebab', 'shami kebab', 'boti kebab', 'galouti kebab',
+    'tandoori chicken', 'butter chicken', 'chicken biryani', 'mutton biryani', 'fish curry', 'fish fry'
+]
+
+NON_VEGAN_INDICATORS = NON_VEG_INDICATORS + [
+    'milk', 'dairy', 'cheese', 'paneer', 'butter', 'ghee', 'cream', 'yogurt', 'curd',
+    'malai', 'rabri', 'kheer', 'kulfi', 'lassi', 'raita', 'whey', 'casein', 'lactose',
+    'honey', 'ice cream', 'mayonnaise', 'custard'
+]
+
+VEG_EXCLUSIONS = ['paneer', 'tofu', 'soya', 'soy', 'veg', 'vegetarian', 'mushroom', 'corn', 'aloo', 'gobhi', 'palak', 'dal']
+
 def detect_allergens(food_name: str, user_allergies: List[str]) -> List[str]:
     allergen_warnings = []
     food_name_lower = food_name.lower()
@@ -100,3 +120,30 @@ def detect_allergens(food_name: str, user_allergies: List[str]) -> List[str]:
                     break
 
     return allergen_warnings
+
+def detect_dietary_conflict(food_name: str, diet_preference: str) -> Optional[str]:
+    if not diet_preference or not food_name:
+        return None
+        
+    pref = diet_preference.lower().strip()
+    lower_name = food_name.lower()
+
+    # If preference is vegetarian or veg
+    if pref in ['veg', 'vegetarian', 'lacto-vegetarian', 'ovo-lacto-vegetarian']:
+        for item in NON_VEG_INDICATORS:
+            # Check for word boundary or keyword match
+            if re.search(r'\b' + re.escape(item) + r'\b', lower_name) or item in lower_name:
+                # Guard against false positives like "veg kebab" or "paneer tikka"
+                if any(f"{exc} {item}" in lower_name or f"{exc}-{item}" in lower_name for exc in VEG_EXCLUSIONS):
+                    continue
+                return f'Dietary Conflict: "{food_name}" contains Non-Vegetarian ingredients ({item}) which does not match your Vegetarian diet preference.'
+                
+    # If preference is vegan
+    elif pref in ['vegan', 'plant-based']:
+        for item in NON_VEGAN_INDICATORS:
+            if re.search(r'\b' + re.escape(item) + r'\b', lower_name) or item in lower_name:
+                if any(f"{exc} {item}" in lower_name or f"{exc}-{item}" in lower_name for exc in ['vegan', 'plant-based', 'dairy-free', 'soy', 'almond', 'oat', 'coconut']):
+                    continue
+                return f'Dietary Conflict: "{food_name}" contains Animal/Dairy ingredients ({item}) which does not match your Vegan diet preference.'
+
+    return None

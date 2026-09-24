@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from .models import NutritionInfo, AlternativeReason
 from .model import LinearRegressionModel
-from .scoring import get_goal_multipliers, to_number
+from .scoring import get_goal_transition_multipliers, to_number
 
 FEATURE_SPECS = [
     {"key": "calories", "name": "Calories", "scale": 600.0, "unit": "kcal", "defaultBetter": "lower"},
@@ -19,13 +19,14 @@ def calculate_feature_importance(
     baseline: NutritionInfo,
     alternative: NutritionInfo,
     model: Optional[LinearRegressionModel],
-    target_body_type: str = "athletic"
+    target_body_type: str = "athletic",
+    current_body_type: str = "average"
 ) -> List[AlternativeReason]:
     base_dict = baseline.model_dump()
     alt_dict = alternative.model_dump()
 
     if model and len(model.weights) >= 9:
-        multipliers = get_goal_multipliers(target_body_type)
+        multipliers = get_goal_transition_multipliers(target_body_type, current_body_type)
         contributions = []
 
         for i, spec in enumerate(FEATURE_SPECS):
@@ -67,7 +68,7 @@ def calculate_feature_importance(
                 status = "better"
                 if spec["key"] == "calories":
                     actual_change = f"{round(abs_diff)} fewer calories" if raw_diff < 0 else f"{round(abs_diff)} more calories"
-                    explanation = "Fewer calories reduce calorie surplus and support body composition goals" if raw_diff < 0 else "Provides additional caloric energy tailored to muscle recovery"
+                    explanation = "Fewer calories reduce calorie surplus and support body composition goals" if raw_diff < 0 else "Provides additional caloric energy tailored to weight and muscle gain"
                 elif spec["key"] == "protein":
                     actual_change = f"{formatted_diff} more protein"
                     explanation = "Higher protein actively promotes muscle repair, metabolic rate, and satiety"
@@ -84,11 +85,11 @@ def calculate_feature_importance(
                     actual_change = f"{formatted_diff} less sodium"
                     explanation = "Lower sodium helps maintain balanced blood pressure and reduces water retention"
                 elif spec["key"] == "fat":
-                    actual_change = f"{formatted_diff} less fat"
-                    explanation = "Lower total fat reduces overall caloric density"
+                    actual_change = f"{formatted_diff} more healthy fat" if raw_diff > 0 else f"{formatted_diff} less fat"
+                    explanation = "Provides dense healthy fats for mass building" if raw_diff > 0 else "Lower total fat reduces overall caloric density"
                 elif spec["key"] == "carbs":
-                    actual_change = f"{formatted_diff} fewer carbs"
-                    explanation = "Lower carbohydrate content supports glycemic control"
+                    actual_change = f"{formatted_diff} more energizing carbs" if raw_diff > 0 else f"{formatted_diff} fewer carbs"
+                    explanation = "Supplies complex carbohydrate energy for mass gain" if raw_diff > 0 else "Lower carbohydrate content supports glycemic control"
                 elif spec["key"] == "processingLevel":
                     actual_change = "Less processed"
                     explanation = "Less processed ingredients retain higher natural micronutrient density"

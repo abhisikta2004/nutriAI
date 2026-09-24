@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, MicOff, Volume2, VolumeX, Sparkles, Loader2, Play, RotateCcw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,11 +24,55 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const lockedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Deterministically select and lock onto a SINGLE consistent high-fidelity voice
+  const resolveAndLockVoice = useCallback(() => {
+    if (!synthRef.current) return null;
+    const voices = synthRef.current.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // Prioritized single voice preference list (Natural, clean English voices)
+    const preferredVoiceNames = [
+      "Google US English",
+      "Samantha",
+      "Microsoft Zira - English (United States)",
+      "Microsoft Jenny Online (Natural) - English (United States)",
+      "Karen",
+      "Daniel",
+      "Alex"
+    ];
+
+    for (const name of preferredVoiceNames) {
+      const found = voices.find((v) => v.name.includes(name));
+      if (found) {
+        lockedVoiceRef.current = found;
+        return found;
+      }
+    }
+
+    // Fallback to first en-US or en voice
+    const fallbackEnUs = voices.find((v) => v.lang === "en-US" || v.lang === "en_US") ||
+      voices.find((v) => v.lang.startsWith("en")) ||
+      voices[0];
+
+    lockedVoiceRef.current = fallbackEnUs;
+    return fallbackEnUs;
+  }, []);
 
   // Initialize Speech Recognition & Synthesis on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       synthRef.current = window.speechSynthesis;
+
+      // Ensure voices are loaded and locked immediately
+      if (synthRef.current) {
+        resolveAndLockVoice();
+        synthRef.current.onvoiceschanged = () => {
+          resolveAndLockVoice();
+        };
+      }
 
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -37,6 +81,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = true;
+        recognition.maxAlternatives = 5;
         recognition.lang = "en-US";
 
         recognition.onstart = () => {
@@ -48,16 +93,22 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             currentTranscript += event.results[i][0].transcript;
           }
-          setTranscript(currentTranscript);
+          const cleanText = currentTranscript.trim();
+          setTranscript(cleanText);
+
+          // Reset silence timer on fresh speech input
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+          }
         };
 
         recognition.onerror = (event: any) => {
           console.warn("Speech recognition error:", event.error);
           setIsListening(false);
           if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            toast.error("Microphone access denied. Please enable microphone permissions in your browser.");
+            toast.error("Microphone access denied. Please allow microphone permissions.");
           } else if (event.error !== "no-speech") {
-            toast.error(`Voice input: ${event.error}`);
+            toast.error(`Voice error: ${event.error}`);
           }
         };
 
@@ -73,13 +124,16 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
 
     return () => {
       stopSpeaking();
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
       if (recognitionRef.current) {
         recognitionRef.current.abort();
       }
     };
-  }, []);
+  }, [resolveAndLockVoice]);
 
-  // Natural Human Speech Synthesizer with pauses and natural cadence
+  // Consistent Single-Sound Speech Synthesizer
   const speakTextNaturally = (text: string) => {
     if (!synthRef.current) return;
 
@@ -89,7 +143,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
     setLastSpokenText(text);
     setIsSpeaking(true);
 
-    // Clean up markers like "..." and [pause] into natural comma pauses
+    // Clean up markers like "..." and [pause] into natural punctuation pauses
     const naturalText = text
       .replace(/\[pause\]/gi, ", ")
       .replace(/\.\.\./g, ", ")
@@ -99,26 +153,14 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
     const utterance = new SpeechSynthesisUtterance(naturalText);
     currentUtteranceRef.current = utterance;
 
-    // Pick best natural human voice
-    const voices = synthRef.current.getVoices();
-    const naturalVoice = voices.find(
-      (v) =>
-        (v.name.includes("Google") ||
-          v.name.includes("Natural") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Siri") ||
-          v.name.includes("Daniel") ||
-          v.name.includes("Karen") ||
-          v.name.includes("English")) &&
-        v.lang.startsWith("en")
-    ) || voices.find((v) => v.lang.startsWith("en")) || voices[0];
-
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
+    // Always use the locked voice for 100% single sound consistency
+    const voiceToUse = lockedVoiceRef.current || resolveAndLockVoice();
+    if (voiceToUse) {
+      utterance.voice = voiceToUse;
     }
 
-    utterance.rate = 0.96; // Slightly relaxed, natural human conversational pacing
-    utterance.pitch = 1.0;
+    utterance.rate = 0.98; // Natural, steady conversational pacing
+    utterance.pitch = 1.0; // Locked pitch
     utterance.volume = 1.0;
 
     utterance.onend = () => {
@@ -203,7 +245,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
         onAnalysis(data);
         toast.success("Analysis complete!");
 
-        // If backend returned natural spoken explanation, speak it out
+        // Speak back with the locked voice
         if (data.spokenResponse) {
           speakTextNaturally(data.spokenResponse);
         }
@@ -227,7 +269,7 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
 
   return (
     <Card className="p-8 bg-gradient-to-br from-card via-card/90 to-primary/5 border-2 border-primary/20 shadow-elevated relative overflow-hidden">
-      {/* Decorative ambient background blur */}
+      {/* Ambient background blur */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -252,13 +294,12 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
             Talk to NutriAI in Natural Voice
           </h3>
           <p className="text-sm text-muted-foreground">
-            Just tell NutriAI what you're eating or planning to eat. It will think, score it, and speak back healthier alternatives with natural conversation.
+            Just tell NutriAI what you're eating or planning to eat. It will analyze your macros, verify your diet, and speak back healthier swaps using a dedicated consistent voice.
           </p>
         </div>
 
         {/* Central Interactive Audio Button */}
         <div className="relative my-4 flex items-center justify-center">
-          {/* Animated Halo Rings when Listening */}
           {isListening && (
             <>
               <div className="absolute w-36 h-36 rounded-full bg-primary/20 animate-ping" />
@@ -266,7 +307,6 @@ export const VoiceAdvisor = ({ onAnalysis, isAnalyzingGlobal = false }: VoiceAdv
             </>
           )}
 
-          {/* Animated Equalizer Waves when Speaking */}
           {isSpeaking && (
             <div className="absolute -inset-4 rounded-full border-2 border-emerald-500/40 animate-spin opacity-75" />
           )}

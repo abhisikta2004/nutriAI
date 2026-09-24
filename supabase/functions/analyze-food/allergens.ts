@@ -1,9 +1,9 @@
 /**
- * Single source of truth for allergen detection across NutriAI.
- * Uses a three-layer detection strategy:
+ * Single source of truth for allergen detection and dietary preference verification across NutriAI.
  * 1. Direct match in food name
  * 2. Keyword-based category expansion (e.g. dairy -> cheese, butter, paneer)
  * 3. Food composition recipe map (e.g. butter chicken -> dairy, lactose, chicken)
+ * 4. Dietary preference verification (Vegetarian vs Non-Veg, Vegan vs Non-Vegan)
  */
 
 export const ALLERGEN_KEYWORDS: Record<string, string[]> = {
@@ -90,6 +90,26 @@ export const FOOD_ALLERGEN_MAP: Record<string, string[]> = {
   'pancake': ['eggs', 'wheat', 'dairy'],
 };
 
+export const NON_VEG_INDICATORS = [
+  'chicken', 'mutton', 'lamb', 'beef', 'pork', 'bacon', 'ham', 'sausage', 'meat',
+  'fish', 'salmon', 'tuna', 'pomfret', 'rohu', 'hilsa', 'surmai', 'bangda', 'rawas', 'cod', 'tilapia', 'seafood',
+  'prawn', 'shrimp', 'crab', 'lobster', 'squid', 'calamari', 'octopus', 'jhinga', 'kolambi',
+  'egg', 'eggs', 'omelette', 'omelet', 'egg bhurji', 'egg curry',
+  'duck', 'turkey', 'poultry', 'pepperoni', 'prosciutto', 'salami',
+  'chicken tikka', 'mutton tikka', 'fish tikka', 'chicken kebab', 'mutton kebab', 
+  'seekh kebab', 'shami kebab', 'boti kebab', 'galouti kebab',
+  'tandoori chicken', 'butter chicken', 'chicken biryani', 'mutton biryani', 'fish curry', 'fish fry'
+];
+
+export const NON_VEGAN_INDICATORS = [
+  ...NON_VEG_INDICATORS,
+  'milk', 'dairy', 'cheese', 'paneer', 'butter', 'ghee', 'cream', 'yogurt', 'curd',
+  'malai', 'rabri', 'kheer', 'kulfi', 'lassi', 'raita', 'whey', 'casein', 'lactose',
+  'honey', 'ice cream', 'mayonnaise', 'custard'
+];
+
+export const VEG_EXCLUSIONS = ['paneer', 'tofu', 'soya', 'soy', 'veg', 'vegetarian', 'mushroom', 'corn', 'aloo', 'gobhi', 'palak', 'dal'];
+
 /**
  * Detect allergens present in a food item matching user's allergy profile.
  */
@@ -138,4 +158,48 @@ export function detectAllergens(foodName: string, userAllergies: string[]): stri
   }
 
   return allergenWarning;
+}
+
+/**
+ * Detect if a food item violates the user's vegetarian or vegan dietary preference.
+ */
+export function detectDietaryConflict(foodName: string, dietPreference: string): string | null {
+  if (!dietPreference || !foodName) return null;
+  const pref = dietPreference.toLowerCase().trim();
+  const lowerName = foodName.toLowerCase();
+
+  if (pref === 'veg' || pref === 'vegetarian' || pref === 'lacto-vegetarian' || pref === 'ovo-lacto-vegetarian') {
+    const matched = NON_VEG_INDICATORS.find(item => {
+      const regex = new RegExp(`\\b${item}\\b`, 'i');
+      if (regex.test(lowerName) || lowerName.includes(item)) {
+        // Guard against exclusions
+        if (VEG_EXCLUSIONS.some(exc => lowerName.includes(`${exc} ${item}`) || lowerName.includes(`${exc}-${item}`))) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    if (matched) {
+      return `Dietary Conflict: "${foodName}" contains Non-Vegetarian ingredients (${matched}) which does not match your Vegetarian diet preference.`;
+    }
+  } else if (pref === 'vegan' || pref === 'plant-based') {
+    const matched = NON_VEGAN_INDICATORS.find(item => {
+      const regex = new RegExp(`\\b${item}\\b`, 'i');
+      if (regex.test(lowerName) || lowerName.includes(item)) {
+        if (['vegan', 'plant-based', 'dairy-free', 'soy', 'almond', 'oat', 'coconut'].some(exc => lowerName.includes(`${exc} ${item}`) || lowerName.includes(`${exc}-${item}`))) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    if (matched) {
+      return `Dietary Conflict: "${foodName}" contains Animal/Dairy ingredients (${matched}) which does not match your Vegan diet preference.`;
+    }
+  }
+
+  return null;
 }

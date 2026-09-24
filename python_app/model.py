@@ -1,8 +1,8 @@
 import os
 import json
 import math
-import asyncio
 from typing import List, Optional, Dict, Any, Tuple
+import numpy as np
 from .curated_data import meal_type_alternatives, alternatives_by_category
 from .scoring import calculate_basic_health_score
 
@@ -23,12 +23,12 @@ FEATURE_SCALES = [600.0, 30.0, 100.0, 40.0, 20.0, 50.0, 15.0, 2000.0, 1.0]
 class LinearRegressionModel:
     """
     Explainable Linear Regression Machine Learning Model for Nutritional Scoring.
-    Trained via Gradient Descent on Mean Squared Error (MSE) loss with optional L2 regularization.
+    Supports both closed-form Ridge Regression and iterative Gradient Descent.
     """
     def __init__(self, weights: Optional[List[float]] = None, bias: float = 58.0):
         # Feature order: [Calories, Protein, Carbs, Fat, SatFat, Sugar, Fiber, Sodium, Processing]
-        # Calibrated nutritional baseline weights (scale factor applied to normalized features):
-        self.weights: List[float] = weights if weights is not None else [-16.0, 28.0, -6.0, -8.0, -20.0, -26.0, 24.0, -14.0, -20.0]
+        # Calibrated nutritional baseline weights:
+        self.weights: List[float] = weights if weights is not None else [-14.0, 30.0, -4.0, -10.0, -22.0, -26.0, 30.0, -12.0, -18.0]
         self.bias: float = bias
         self.loss_history: List[float] = []
 
@@ -44,6 +44,45 @@ class LinearRegressionModel:
         """Calculate bounded health score between 5.0 and 98.0."""
         raw = self.predict_raw(features)
         return max(5.0, min(98.0, round(raw, 1)))
+
+    def train_analytical(self, features: List[List[float]], labels: List[float], l2_reg: float = 0.05) -> Dict[str, Any]:
+        """
+        Closed-form regularized Ordinary Least Squares (Ridge Regression) solution:
+        theta = (X^T X + lambda I)^(-1) X^T y
+        """
+        if not features or not labels:
+            return {"status": "empty_data"}
+
+        X = np.array(features, dtype=np.float64)
+        y = np.array(labels, dtype=np.float64)
+
+        # Add bias column (intercept)
+        num_samples = X.shape[0]
+        X_design = np.hstack([np.ones((num_samples, 1)), X])
+
+        # Regularization matrix (do not regularize intercept)
+        I_reg = np.eye(X_design.shape[1])
+        I_reg[0, 0] = 0.0
+
+        # Closed-form solution
+        A = X_design.T @ X_design + l2_reg * I_reg
+        b = X_design.T @ y
+        theta = np.linalg.solve(A, b)
+
+        self.bias = float(theta[0])
+        self.weights = [float(w) for w in theta[1:]]
+
+        # Compute MSE
+        preds = X_design @ theta
+        mse = float(np.mean((preds - y) ** 2))
+        self.loss_history = [mse]
+
+        return {
+            "method": "ridge_closed_form",
+            "mse": round(mse, 3),
+            "bias": round(self.bias, 3),
+            "weights": [round(w, 3) for w in self.weights]
+        }
 
     def train(
         self, 
@@ -253,8 +292,8 @@ def normalize_features(data_list: List[Dict[str, Any]]) -> Tuple[List[List[float
 
 _trained_model: Optional[LinearRegressionModel] = None
 
-def train_health_score_model(extra_data: Optional[List[Dict[str, Any]]] = None) -> LinearRegressionModel:
-    """Train linear regression ML model with gradient descent on benchmark and optional OpenFoodFacts data."""
+def train_health_score_model(extra_data: Optional[List[Dict[str, Any]]] = None, use_closed_form: bool = True) -> LinearRegressionModel:
+    """Train linear regression ML model with analytical Ridge Regression or gradient descent."""
     training_data = get_benchmark_training_data()
     if extra_data:
         training_data.extend(extra_data)
@@ -262,26 +301,32 @@ def train_health_score_model(extra_data: Optional[List[Dict[str, Any]]] = None) 
     features, labels = normalize_features(training_data)
 
     model = LinearRegressionModel()
-    train_metrics = model.train(features, labels, epochs=150, learning_rate=0.05)
-    eval_metrics = model.evaluate(features, labels)
+    if use_closed_form:
+        model.train_analytical(features, labels, l2_reg=0.01)
+    else:
+        model.train(features, labels, epochs=150, learning_rate=0.05)
 
-    print(f"✅ NutriAI Python Model Trained (MSE: {eval_metrics['mse']}, MAE: {eval_metrics['mae']}, R²: {eval_metrics['r2']})")
+    eval_metrics = model.evaluate(features, labels)
+    print(f"✅ NutriAI Model Calibrated (MSE: {eval_metrics['mse']}, MAE: {eval_metrics['mae']}, R²: {eval_metrics['r2']})")
     return model
 
-async def ensure_model_trained() -> LinearRegressionModel:
-    """Return the global cached trained model singleton."""
+def get_trained_model() -> LinearRegressionModel:
+    """Synchronous getter for the global cached trained model singleton."""
     global _trained_model
     if _trained_model is None:
         _trained_model = train_health_score_model()
     return _trained_model
 
+async def ensure_model_trained() -> LinearRegressionModel:
+    """Async wrapper for compatibility with async caller pipelines."""
+    return get_trained_model()
 
 if __name__ == "__main__":
     print("=" * 65)
     print("🚀 NutriAI Python Model Training & Evaluation Benchmark")
     print("=" * 65)
 
-    model = train_health_score_model()
+    model = train_health_score_model(use_closed_form=True)
     print("\n" + model.summary())
 
     dataset = get_benchmark_training_data()

@@ -130,6 +130,9 @@ export function getHeuristicNutrition(query: string): IdentifiedFood {
   } else if (q.includes('smoothie') || q.includes('shake')) {
     name = 'Fruit & Protein Smoothie';
     nutrition = { calories: 140, protein: 8, carbs: 22, fat: 2, saturatedFat: 0.5, sugar: 14, fiber: 3.5, sodium: 60, processingLevel: 0.2 };
+  } else if (q.includes('wings') || q.includes('crispy') || q.includes('fried chicken') || q.includes('butter chicken') || q.includes('nuggets')) {
+    name = 'Crispy Chicken Wings / Fried Chicken';
+    nutrition = { calories: 380, protein: 19, carbs: 22, fat: 25, saturatedFat: 8.0, sugar: 3, fiber: 1.0, sodium: 820, processingLevel: 0.8 };
   } else if (q.includes('chicken') || q.includes('turkey') || q.includes('tikka')) {
     name = 'Grilled Chicken Breast with Rice';
     nutrition = { calories: 165, protein: 31, carbs: 4, fat: 3.6, saturatedFat: 1, sugar: 0, fiber: 1, sodium: 220, processingLevel: 0.2 };
@@ -478,9 +481,19 @@ export function generateSpokenExplanation(
   baselineScore: number,
   targetBodyType: string,
   bestChoice: any | null,
-  alreadyOptimal: boolean
+  alreadyOptimal: boolean,
+  dietaryWarning?: string | null
 ): string {
   const goal = (targetBodyType || 'athletic').replace('_', ' ');
+
+  // If dietary conflict is detected (e.g. non-veg in veg profile)
+  if (dietaryWarning) {
+    if (bestChoice) {
+      const topBenefit = bestChoice.reasons?.[0]?.actualChange || bestChoice.benefits?.[0] || 'clean vegetarian macros';
+      return `Heads up! ... You've selected a vegetarian or vegan diet preference, but ${foodName} contains non-vegetarian or animal ingredients. ... For your ${goal} goal, I recommend trying ${bestChoice.name}, which is 100% plant-friendly, healthier, and scores ${bestChoice.healthScore} out of 100! ... It provides ${topBenefit}.`;
+    }
+    return `Heads up! ... You've selected a vegetarian diet preference, but ${foodName} contains non-vegetarian ingredients. ... Please check the vegetarian alternatives below matching your ${goal} goal.`;
+  }
 
   if (alreadyOptimal || !bestChoice) {
     return `That's a fantastic choice! ... Based on our nutritional model for your ${goal} goal, ${foodName} scores ${baselineScore} out of 100. ... It has a clean, well-balanced nutrient profile with minimal empty calories. ... No healthier swaps are needed in our database, so go right ahead and enjoy your meal!`;

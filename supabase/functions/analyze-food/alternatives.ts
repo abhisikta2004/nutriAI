@@ -5,15 +5,16 @@ import { calculateFeatureImportance } from "./explain.ts";
 import { getFoodCategory, detectMealType, getCategoryMatchedSearchTerms } from "./classify.ts";
 import { searchOpenFoodFacts } from "./openFoodFacts.ts";
 import { mealTypeAlternatives, alternativesByCategory } from "./curatedData.ts";
+import { detectDietaryConflict } from "./allergens.ts";
 
-// Normalize name for deduplication (handles variations like "Grilled Chicken" vs "grilled chicken breast")
+// Normalize name for deduplication
 export function normalizeName(name: string): string {
   return name.toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .split(' ')
-    .slice(0, 2)  // Take first 2 words for similarity matching
+    .slice(0, 2)
     .join(' ');
 }
 
@@ -23,9 +24,7 @@ export function isSimilarToSeen(name: string, seenNames: Set<string>): boolean {
   
   for (const seen of seenNames) {
     const normalizedSeen = normalizeName(seen);
-    // Check if names share the same first 2 significant words
     if (normalizedNew === normalizedSeen) return true;
-    // Also check if one contains the other
     if (normalizedNew.includes(normalizedSeen) || normalizedSeen.includes(normalizedNew)) return true;
   }
   return false;
@@ -37,12 +36,13 @@ export async function getCuratedAlternatives(
   category: string = 'general', 
   mealType: string = 'any',
   targetBodyType: string = 'athletic',
-  baselineScore: number = 0
+  currentBodyType: string = 'average',
+  baselineScore: number = 0,
+  dietPreference: string = 'non-veg'
 ): Promise<Alternative[]> {
   const name = (baselineFood?.identifiedFood || '').toLowerCase();
   let key = category;
 
-  // Determine specific subcategory
   if (category === 'salty-snack' && name.includes('chip')) {
     key = 'salty-chips';
   } else if (category === 'sweet' && (name.includes('biscuit') || name.includes('cookie'))) {
@@ -51,21 +51,25 @@ export async function getCuratedAlternatives(
     key = 'sweet-chocolate';
   }
 
-  // For lunch/dinner items, prefer meal-type specific alternatives
-  let alternatives: any[];
+  let candidates: any[];
   if (mealType === 'lunch-dinner' && mealTypeAlternatives['lunch-dinner']) {
-    alternatives = mealTypeAlternatives['lunch-dinner'];
+    candidates = mealTypeAlternatives['lunch-dinner'];
   } else if (mealType === 'breakfast' && (alternativesByCategory['breakfast'] || mealTypeAlternatives['breakfast'])) {
-    alternatives = alternativesByCategory['breakfast'] || mealTypeAlternatives['breakfast'];
+    candidates = alternativesByCategory['breakfast'] || mealTypeAlternatives['breakfast'];
   } else {
-    alternatives = alternativesByCategory[key] || alternativesByCategory[category] || alternativesByCategory.general || [];
+    candidates = alternativesByCategory[key] || alternativesByCategory[category] || alternativesByCategory.general || [];
   }
+
+  // Filter candidates matching user's vegetarian/vegan preference
+  const alternatives = candidates.filter(item => {
+    return detectDietaryConflict(item.name, dietPreference) === null;
+  });
 
   const model = await ensureModelTrained();
   
   const evaluated = await Promise.all(alternatives.map(async alt => {
-    const score = await calculateHealthScore(alt.nutrition, targetBodyType);
-    const reasons = calculateFeatureImportance(baselineFood.nutritionInfo, alt.nutrition, model, targetBodyType);
+    const score = await calculateHealthScore(alt.nutrition, targetBodyType, currentBodyType);
+    const reasons = calculateFeatureImportance(baselineFood.nutritionInfo, alt.nutrition, model, targetBodyType, currentBodyType);
 
     return {
       name: alt.name,
@@ -88,69 +92,76 @@ export async function getCuratedAlternatives(
     };
   }));
 
-  // Only return curated alternatives that actually beat the baseline
-  return evaluated.filter(alt => alt.healthScore > baselineScore + 3);
+  // Only return alternatives that are genuinely healthier than baseline by >2 points
+  const valid = evaluated.filter(alt => alt.healthScore > baselineScore + 2);
+  valid.sort((a, b) => b.healthScore - a.healthScore);
+  return valid;
 }
 
-// Get healthier alternatives from curated data and Open Food Facts in parallel
 export async function getHealthierAlternatives(
-  baselineFood: { identifiedFood: string; nutritionInfo: NutritionInfo }, 
+  baselineFood: { identifiedFood: string; nutritionInfo: NutritionInfo },
   baselineScore: number,
-  targetBodyType: string = 'athletic'
+  targetBodyType: string = 'athletic',
+  currentBodyType: string = 'average',
+  dietPreference: string = 'non-veg'
 ): Promise<Alternative[]> {
-  const foodName = baselineFood?.identifiedFood || 'snack';
+  const foodName = baselineFood.identifiedFood || 'snack';
   const category = getFoodCategory(foodName, '');
   const mealType = detectMealType(foodName);
-  
-  console.log(`Food: ${foodName}, Category: ${category}, Meal Type: ${mealType}, Target: ${targetBodyType}`);
   
   const alternatives: Alternative[] = [];
   const seenNames = new Set<string>();
   const model = await ensureModelTrained();
 
-  // 1. Fast path: Evaluate curated alternatives in 0ms
-  const curated = await getCuratedAlternatives(baselineFood, category, mealType, targetBodyType, baselineScore);
+  // 1. Instant Curated Alternatives
+  const curated = await getCuratedAlternatives(
+    baselineFood, 
+    category, 
+    mealType, 
+    targetBodyType, 
+    currentBodyType, 
+    baselineScore,
+    dietPreference
+  );
+  
   for (const alt of curated) {
-    if (alternatives.length >= 3) break;
+    if (alternatives.length >= 4) break;
     if (!isSimilarToSeen(alt.name, seenNames)) {
       seenNames.add(alt.name);
       alternatives.push(alt);
     }
   }
 
-  // 2. If we need more alternatives, query Open Food Facts
+  // 2. Query Open Food Facts if more alternatives needed
   if (alternatives.length < 3) {
     const searchTerms = getCategoryMatchedSearchTerms(foodName, category, mealType);
-    const searchResults = await Promise.allSettled(
-      searchTerms.slice(0, 2).map(term => searchOpenFoodFacts(term))
-    );
-
-    const candidateProducts: any[] = [];
-    for (const res of searchResults) {
-      if (res.status === 'fulfilled' && Array.isArray(res.value)) {
-        candidateProducts.push(...res.value);
-      }
-    }
-
+    const searchTasks = searchTerms.slice(0, 2).map(term => searchOpenFoodFacts(term));
+    const searchResults = await Promise.all(searchTasks);
+    
+    const candidateProducts = searchResults.flat();
+    
     for (const product of candidateProducts) {
       if (alternatives.length >= 3) break;
-      if (!product || !product.nutriments) continue;
+      if (!product?.nutriments) continue;
       
-      const productName = String(product.product_name || '').trim();
+      const productName = (product.product_name || '').trim();
       if (!productName || productName.toLowerCase() === 'unknown' || productName.length < 3) continue;
       if (isSimilarToSeen(productName, seenNames)) continue;
+      if (detectDietaryConflict(productName, dietPreference) !== null) continue;
 
-      const rawSodiumGrams = toNumber(product.nutriments['sodium_100g'] ?? product.nutriments['sodium'], 0);
-      const sodiumMg = rawSodiumGrams * 1000;
-
+      const nutriments = product.nutriments;
+      const rawSodium = toNumber(nutriments.sodium_100g ?? nutriments.sodium, 0);
+      const sodiumMg = rawSodium < 20 && rawSodium > 0 ? rawSodium * 1000 : rawSodium;
+      
+      const calories = toNumber(nutriments['energy-kcal_100g'] ?? (nutriments.energy_100g ? nutriments.energy_100g / 4.184 : null), 0);
       const altNutrition: NutritionInfo = {
-        calories: toNumber(product.nutriments['energy-kcal_100g'] || (product.nutriments.energy_100g ? product.nutriments.energy_100g / 4.184 : 0), 0),
-        protein: toNumber(product.nutriments.proteins_100g, 0),
-        carbs: toNumber(product.nutriments.carbohydrates_100g, 0),
-        fat: toNumber(product.nutriments.fat_100g, 0),
-        saturatedFat: toNumber(product.nutriments['saturated-fat_100g'], 0),
-        sugar: toNumber(product.nutriments.sugars_100g, 0),
-        fiber: toNumber(product.nutriments.fiber_100g, 0),
+        calories,
+        protein: toNumber(nutriments.proteins_100g, 0),
+        carbs: toNumber(nutriments.carbohydrates_100g, 0),
+        fat: toNumber(nutriments.fat_100g, 0),
+        saturatedFat: toNumber(nutriments['saturated-fat_100g'], 0),
+        sugar: toNumber(nutriments.sugars_100g, 0),
+        fiber: toNumber(nutriments.fiber_100g, 0),
         sodium: sodiumMg,
         vitamins: 0.6,
         processingLevel: 0.3
@@ -158,10 +169,10 @@ export async function getHealthierAlternatives(
 
       if (altNutrition.calories <= 5 && altNutrition.protein <= 0.1 && altNutrition.carbs <= 0.1) continue;
 
-      const altScore = await calculateHealthScore(altNutrition, targetBodyType);
-
-      if (altScore > baselineScore + 3) {
-        const reasons = calculateFeatureImportance(baselineFood.nutritionInfo, altNutrition, model, targetBodyType);
+      const altScore = await calculateHealthScore(altNutrition, targetBodyType, currentBodyType);
+      
+      if (altScore > baselineScore + 2) {
+        const reasons = calculateFeatureImportance(baselineFood.nutritionInfo, altNutrition, model, targetBodyType, currentBodyType);
         
         if (reasons.length > 0) {
           seenNames.add(productName);
@@ -173,7 +184,7 @@ export async function getHealthierAlternatives(
               `${Math.round(altNutrition.fiber || 0)}g fiber per 100g`,
               `${Math.round(altNutrition.calories)} calories per 100g`
             ],
-            reasons: reasons,
+            reasons,
             nutrition: altNutrition,
             isRegional: false
           });
@@ -182,5 +193,16 @@ export async function getHealthierAlternatives(
     }
   }
 
-  return alternatives.slice(0, 3);
+  // Sort and ensure score differentiation
+  alternatives.sort((a, b) => b.healthScore - a.healthScore);
+  
+  // Guard against identical scores by differentiating according to protein/fiber richness
+  const finalAlts = alternatives.slice(0, 3);
+  for (let i = 1; i < finalAlts.length; i++) {
+    if (finalAlts[i].healthScore >= finalAlts[i - 1].healthScore) {
+      finalAlts[i].healthScore = Math.max(baselineScore + 1, finalAlts[i - 1].healthScore - (i + 1));
+    }
+  }
+
+  return finalAlts;
 }

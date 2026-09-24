@@ -29,7 +29,7 @@ export const UserProfileSchema = z.object({
   dietPreference: z.string().optional().default('non-veg'),
   allergies: z.array(z.string()).optional().default([]),
   targetBodyType: z.string().optional().default('athletic'),
-  currentBodyType: z.string().optional(),
+  currentBodyType: z.string().optional().default('average'),
   weight: z.union([z.number(), z.string()]).optional(),
   height: z.union([z.number(), z.string()]).optional(),
   age: z.union([z.number(), z.string()]).optional(),
@@ -115,5 +115,6 @@ export interface AnalyzeResponse {
   alreadyOptimal?: boolean;
   bestChoice?: Alternative | null;
   allergenWarning?: string[];
+  dietaryWarning?: string | null;
   spokenResponse?: string;
 }

@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Camera, Sparkles, Heart, Brain, ArrowRight, CheckCircle2, Mic } from "lucide-react";
+import { Camera, Sparkles, Heart, Brain, ArrowRight, CheckCircle2, Mic, Activity } from "lucide-react";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+import { AppleHealthCard } from "@/components/AppleHealthCard";
 import Header from "@/components/Header";
 
 const Home = () => {
@@ -19,12 +20,12 @@ const Home = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 md:py-32 flex-1">
+      <section className="container mx-auto px-4 py-16 md:py-24 flex-1">
         <div className="text-center space-y-8 max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full animate-pulse">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="text-sm font-semibold text-primary">
-              AI-Powered Vision & Voice Health Intelligence
+              AI-Powered Vision, Voice & Apple Health Intelligence
             </span>
           </div>
           
@@ -39,7 +40,7 @@ const Home = () => {
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Snap a photo or speak hands-free to discover healthier alternatives instantly. 
-            Powered by Explainable AI that shows and speaks exactly why each suggestion is better.
+            Calibrated live with Apple Watch active burn, steps, and HealthKit sync.
           </p>
 
           {/* User Profile Summary */}
@@ -58,7 +59,7 @@ const Home = () => {
             </Link>
           </Card>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
             <Link to="/analyze">
               <Button size="lg" className="text-lg px-8 py-6 shadow-[0_0_20px_rgba(142,71,45,0.3)] hover:shadow-[0_0_30px_rgba(142,71,45,0.5)] transition-all">
                 <Camera className="mr-2 h-5 w-5" />
@@ -73,12 +74,17 @@ const Home = () => {
               </Button>
             </Link>
           </div>
+
+          {/* Apple Health Live Sync Overview */}
+          <div className="max-w-3xl mx-auto pt-6 text-left">
+            <AppleHealthCard />
+          </div>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -103,6 +109,18 @@ const Home = () => {
             </div>
           </Card>
 
+          <Card className="p-7 bg-card border-border/50 hover:border-red-500/50 transition-all hover:shadow-card">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                <Activity className="h-6 w-6 text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">Apple Health & HealthKit</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Live concentric Activity Rings (Move, Intake, Protein). Calibrates your daily calorie allowance from Apple Watch workouts.
+              </p>
+            </div>
+          </Card>
+
           <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center">
@@ -115,14 +133,14 @@ const Home = () => {
             </div>
           </Card>
 
-          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card">
+          <Card className="p-7 bg-card border-border/50 hover:border-primary/50 transition-all hover:shadow-card md:col-span-2 lg:col-span-2">
             <div className="space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center">
                 <Brain className="h-6 w-6 text-accent" />
               </div>
-              <h3 className="text-xl font-bold text-foreground">Explainable AI</h3>
+              <h3 className="text-xl font-bold text-foreground">Explainable AI Scoring</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Transparent linear ML regression coefficients show precisely what nutrient differences raised or lowered your score.
+                Transparent linear ML regression coefficients show precisely what nutrient differences raised or lowered your score, dynamically weighted for your body transition.
               </p>
             </div>
           </Card>
@@ -141,9 +159,9 @@ const Home = () => {
               <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold">
                 1
               </div>
-              <h4 className="text-xl font-semibold text-foreground">Upload Photo</h4>
+              <h4 className="text-xl font-semibold text-foreground">Upload Photo or Speak</h4>
               <p className="text-muted-foreground">
-                Take a picture of your food or upload an existing photo. Choose quick scan or detailed logging.
+                Take a picture of your food or speak hands-free with Voice Advisor for instant nutritional analysis.
               </p>
             </div>
 

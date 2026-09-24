@@ -9,7 +9,7 @@ import {
 import { identifyFoodWithAI, identifyFoodFromVoiceQuery, generateSpokenExplanation } from "./llm.ts";
 import { calculateHealthScore } from "./scoring.ts";
 import { getHealthierAlternatives } from "./alternatives.ts";
-import { detectAllergens } from "./allergens.ts";
+import { detectAllergens, detectDietaryConflict } from "./allergens.ts";
 import { processDetailedLog } from "./detailedLog.ts";
 
 serve(async (req) => {
@@ -38,10 +38,11 @@ serve(async (req) => {
     const dietPreference = userProfile?.dietPreference || 'non-veg';
     const allergies = userProfile?.allergies || [];
     const targetBodyType = userProfile?.targetBodyType || 'athletic';
+    const currentBodyType = userProfile?.currentBodyType || 'average';
 
-    console.log(`Analyzing food with preferences - Diet: ${dietPreference}, Target: ${targetBodyType}, Allergies: ${JSON.stringify(allergies)}`);
+    console.log(`Analyzing food - Diet: ${dietPreference}, Current: ${currentBodyType}, Target: ${targetBodyType}, Allergies: ${JSON.stringify(allergies)}`);
 
-    // 1. Identification and initial nutrition extraction (Image Vision or Spoken Voice Query)
+    // 1. Identification (Vision or Voice)
     let identified;
     if (voiceQuery && voiceQuery.trim().length > 0) {
       console.log('Using voice query processor for:', voiceQuery);
@@ -53,9 +54,8 @@ serve(async (req) => {
     }
 
     console.log('Food identified:', identified.name);
-    console.log('Base nutrition per 100g:', JSON.stringify(identified.nutrition));
 
-    // Fast-path: in detailed mode we do a lightweight first pass (name + nutrition only)
+    // Fast-path: identify-only
     if (identifyOnly) {
       const identifyOnlyResponse = {
         identifiedFood: identified.name,
@@ -78,7 +78,7 @@ serve(async (req) => {
       );
     }
 
-    // 2. Baseline nutrition & health score using custom ML model
+    // 2. Baseline nutrition & health score with current -> target transition multipliers
     const baselineNutrition: NutritionInfo = {
       calories: identified.nutrition.calories,
       protein: identified.nutrition.protein,
@@ -92,65 +92,64 @@ serve(async (req) => {
       processingLevel: identified.nutrition.processingLevel ?? 0.5
     };
 
-    const baselineScore = await calculateHealthScore(baselineNutrition, targetBodyType);
+    const baselineScore = await calculateHealthScore(baselineNutrition, targetBodyType, currentBodyType);
     console.log('Baseline health score:', baselineScore);
 
-    // 3. Search for healthier alternatives that beat the baseline health score by >3 points
-    console.log('Searching for healthier alternatives that improve on baseline score:', baselineScore);
+    // 3. Allergen & Dietary Preference Warnings
+    const allergenWarning = detectAllergens(identified.name, allergies);
+    const dietaryWarning = detectDietaryConflict(identified.name, dietPreference);
+
+    if (dietaryWarning) {
+      console.log('Dietary preference conflict detected:', dietaryWarning);
+    }
+
+    // 4. Search for healthier alternatives (>2 points better, matching diet preference)
     const rawAlternatives = await getHealthierAlternatives(
       {
         identifiedFood: identified.name,
         nutritionInfo: baselineNutrition
       },
       baselineScore,
-      targetBodyType
+      targetBodyType,
+      currentBodyType,
+      dietPreference
     );
 
-    // 4. Filter alternatives based on diet preference and allergies
+    // 5. Strict filtering on diet preference and allergies
     const filteredAlternatives = rawAlternatives.filter(alt => {
-      const name = alt.name.toLowerCase();
-      
-      if (dietPreference === 'vegan') {
-        const nonVegan = ['chicken', 'meat', 'fish', 'egg', 'milk', 'dairy', 'yogurt', 'cheese', 'butter', 'honey'];
-        if (nonVegan.some(item => name.includes(item))) return false;
-      } else if (dietPreference === 'vegetarian') {
-        const nonVeg = ['chicken', 'meat', 'fish', 'mutton', 'beef', 'pork', 'prawn', 'shrimp'];
-        if (nonVeg.some(item => name.includes(item))) return false;
+      // Check dietary conflict
+      if (detectDietaryConflict(alt.name, dietPreference) !== null) {
+        return false;
       }
       
+      // Check allergies
       for (const allergy of allergies) {
-        if (name.includes(allergy.toLowerCase())) return false;
+        if (alt.name.toLowerCase().includes(allergy.toLowerCase())) return false;
       }
       
       return true;
     });
 
-    // 5. Calculate detailed total nutrition if custom ingredients or serving details provided
+    // 6. Detailed log portion processing
     const detailedResult = processDetailedLog(identified, detailedLog);
 
-    // 6. Unified three-layer allergen detection on the identified food
-    const allergenWarning = detectAllergens(identified.name, allergies);
-    if (allergenWarning.length > 0) {
-      console.log('Allergen warning detected:', allergenWarning, 'in food:', identified.name);
-    }
-
-    // 7. Pick best choice and detect already-optimal state purely based on whether any candidate beats baseline
+    // 7. Pick best choice and detect already-optimal state
     let bestChoice: Alternative | null = null;
     if (filteredAlternatives.length > 0) {
       const sorted = [...filteredAlternatives].sort((a, b) => b.healthScore - a.healthScore);
       bestChoice = sorted[0];
     }
 
-    // Food is already optimal if no alternative beats baseline by the margin threshold
-    const alreadyOptimal = filteredAlternatives.length === 0;
+    const alreadyOptimal = filteredAlternatives.length === 0 && !dietaryWarning;
 
-    // 8. Generate natural conversational spoken response script with human-like pauses
+    // 8. Generate conversational voice response script
     const spokenResponse = generateSpokenExplanation(
       identified.name,
       Math.round(baselineScore),
       targetBodyType,
       bestChoice,
-      alreadyOptimal
+      alreadyOptimal,
+      dietaryWarning
     );
 
     // 9. Assemble final response
@@ -181,10 +180,11 @@ serve(async (req) => {
       alreadyOptimal,
       bestChoice,
       allergenWarning: allergenWarning.length > 0 ? allergenWarning : undefined,
+      dietaryWarning: dietaryWarning || undefined,
       spokenResponse
     };
 
-    console.log('Analysis complete. Alternatives returned:', filteredAlternatives.length, 'Already optimal:', alreadyOptimal);
+    console.log('Analysis complete. Alternatives:', filteredAlternatives.length, 'Dietary warning:', dietaryWarning);
 
     return new Response(
       JSON.stringify(result),
@@ -196,7 +196,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error occurred',
-        details: 'Failed to analyze food image'
+        details: 'Failed to analyze food'
       }),
       { 
         status: 500, 

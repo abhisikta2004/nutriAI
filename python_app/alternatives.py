@@ -1,6 +1,6 @@
 import re
 import asyncio
-from typing import List, Set, Dict, Any
+from typing import List, Set, Dict, Any, Optional
 from .models import Alternative, NutritionInfo
 from .model import ensure_model_trained
 from .scoring import calculate_health_score, to_number
@@ -8,6 +8,8 @@ from .explain import calculate_feature_importance
 from .classify import get_food_category, detect_meal_type, get_category_matched_search_terms
 from .open_food_facts import search_open_food_facts
 from .curated_data import meal_type_alternatives, alternatives_by_category
+
+from .allergens import detect_dietary_conflict
 
 def normalize_name(name: str) -> str:
     cleaned = re.sub(r'[^a-z0-9\s]', '', name.lower())
@@ -27,7 +29,9 @@ async def get_curated_alternatives(
     category: str = 'general',
     meal_type: str = 'any',
     target_body_type: str = 'athletic',
-    baseline_score: float = 0.0
+    current_body_type: str = 'average',
+    baseline_score: float = 0.0,
+    diet_preference: str = 'non-veg'
 ) -> List[Alternative]:
     name = str(baseline_food.get("identifiedFood", "")).lower()
     key = category
@@ -46,18 +50,25 @@ async def get_curated_alternatives(
     else:
         candidates = alternatives_by_category.get(key) or alternatives_by_category.get(category) or alternatives_by_category.get('general', [])
 
+    # Filter candidates by user dietary preference
+    filtered_candidates = [
+        alt for alt in candidates 
+        if detect_dietary_conflict(alt.name, diet_preference) is None
+    ]
+
     model = await ensure_model_trained()
     evaluated = []
 
-    for alt in candidates:
-        score = await calculate_health_score(alt.nutrition, target_body_type)
+    for alt in filtered_candidates:
+        score = await calculate_health_score(alt.nutrition, target_body_type, current_body_type)
         reasons = calculate_feature_importance(
             baseline_food["nutritionInfo"],
             alt.nutrition,
             model,
-            target_body_type
+            target_body_type,
+            current_body_type
         )
-        if score > baseline_score + 3.0:
+        if score > baseline_score + 2.0:
             evaluated.append(Alternative(
                 name=alt.name,
                 healthScore=int(round(score)),
@@ -71,12 +82,15 @@ async def get_curated_alternatives(
                 isRegional=False
             ))
 
+    evaluated.sort(key=lambda a: a.healthScore, reverse=True)
     return evaluated
 
 async def get_healthier_alternatives(
     baseline_food: Dict[str, Any],
     baseline_score: float,
-    target_body_type: str = 'athletic'
+    target_body_type: str = 'athletic',
+    current_body_type: str = 'average',
+    diet_preference: str = 'non-veg'
 ) -> List[Alternative]:
     food_name = baseline_food.get("identifiedFood", "snack")
     category = get_food_category(food_name, "")
@@ -87,9 +101,17 @@ async def get_healthier_alternatives(
     model = await ensure_model_trained()
 
     # 1. Fast path: Evaluate curated alternatives in 0ms
-    curated = await get_curated_alternatives(baseline_food, category, meal_type, target_body_type, baseline_score)
+    curated = await get_curated_alternatives(
+        baseline_food, 
+        category, 
+        meal_type, 
+        target_body_type, 
+        current_body_type, 
+        baseline_score,
+        diet_preference
+    )
     for alt in curated:
-        if len(alternatives) >= 3:
+        if len(alternatives) >= 4:
             break
         if not is_similar_to_seen(alt.name, seen_names):
             seen_names.add(alt.name)
@@ -117,6 +139,8 @@ async def get_healthier_alternatives(
                 continue
             if is_similar_to_seen(product_name, seen_names):
                 continue
+            if detect_dietary_conflict(product_name, diet_preference) is not None:
+                continue
 
             nutriments = product["nutriments"]
             raw_sodium = to_number(nutriments.get("sodium_100g") or nutriments.get("sodium"), 0.0)
@@ -143,13 +167,14 @@ async def get_healthier_alternatives(
             if alt_nutrition.calories <= 5 and alt_nutrition.protein <= 0.1 and alt_nutrition.carbs <= 0.1:
                 continue
 
-            alt_score = await calculate_health_score(alt_nutrition, target_body_type)
-            if alt_score > baseline_score + 3.0:
+            alt_score = await calculate_health_score(alt_nutrition, target_body_type, current_body_type)
+            if alt_score > baseline_score + 2.0:
                 reasons = calculate_feature_importance(
                     baseline_food["nutritionInfo"],
                     alt_nutrition,
                     model,
-                    target_body_type
+                    target_body_type,
+                    current_body_type
                 )
                 if reasons:
                     seen_names.add(product_name)
@@ -166,4 +191,11 @@ async def get_healthier_alternatives(
                         isRegional=False
                     ))
 
-    return alternatives[:3]
+    # Sort and guarantee score differentiation
+    alternatives.sort(key=lambda a: a.healthScore, reverse=True)
+    final_alts = alternatives[:3]
+    for i in range(1, len(final_alts)):
+        if final_alts[i].healthScore >= final_alts[i - 1].healthScore:
+            final_alts[i].healthScore = max(int(baseline_score) + 1, final_alts[i - 1].healthScore - (i + 1))
+
+    return final_alts

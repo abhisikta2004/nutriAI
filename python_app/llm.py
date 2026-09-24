@@ -105,6 +105,9 @@ def get_heuristic_nutrition(query: str) -> IdentifiedFood:
     elif any(k in q for k in ['smoothie', 'shake']):
         name = 'Fruit & Protein Smoothie'
         nutrition = {"calories": 140, "protein": 8, "carbs": 22, "fat": 2, "saturatedFat": 0.5, "sugar": 14, "fiber": 3.5, "sodium": 60, "processingLevel": 0.2}
+    elif any(k in q for k in ['wings', 'crispy', 'fried chicken', 'butter chicken', 'nuggets', 'fast food']):
+        name = 'Crispy Chicken Wings / Fried Chicken'
+        nutrition = {"calories": 380, "protein": 19, "carbs": 22, "fat": 25, "saturatedFat": 8.0, "sugar": 3, "fiber": 1.0, "sodium": 820, "processingLevel": 0.8}
     elif any(k in q for k in ['chicken', 'turkey', 'tikka']):
         name = 'Grilled Chicken Breast with Rice'
         nutrition = {"calories": 165, "protein": 31, "carbs": 4, "fat": 3.6, "saturatedFat": 1, "sugar": 0, "fiber": 1, "sodium": 220, "processingLevel": 0.2}
@@ -315,9 +318,20 @@ def generate_spoken_explanation(
     baseline_score: int,
     target_body_type: str,
     best_choice: Optional[Alternative],
-    already_optimal: bool
+    already_optimal: bool,
+    dietary_warning: Optional[str] = None
 ) -> str:
     goal = (target_body_type or "athletic").replace("_", " ")
+
+    if dietary_warning:
+        if best_choice:
+            top_benefit = (
+                best_choice.reasons[0].actualChange
+                if best_choice.reasons
+                else (best_choice.benefits[0] if best_choice.benefits else "clean vegetarian macros")
+            )
+            return f"Heads up! ... You've selected a vegetarian or vegan diet preference, but {food_name} contains non-vegetarian or animal ingredients. ... For your {goal} goal, I recommend trying {best_choice.name}, which is 100% plant-friendly, healthier, and scores {best_choice.healthScore} out of 100! ... It provides {top_benefit}."
+        return f"Heads up! ... You've selected a vegetarian diet preference, but {food_name} contains non-vegetarian ingredients. ... Please check the vegetarian alternatives below matching your {goal} goal."
 
     if already_optimal or not best_choice:
         return f"That's a fantastic choice! ... Based on our nutritional model for your {goal} goal, {food_name} scores {baseline_score} out of 100. ... It has a clean, well-balanced nutrient profile with minimal empty calories. ... No healthier swaps are needed in our database, so go right ahead and enjoy your meal!"
