@@ -7,7 +7,11 @@ export interface AppleHealthActivity {
 
 export interface AppleHealthDietaryLog {
   id: string;
-  foodName: string;
+  foodName: string;                     // Logged item name (e.g. "Cauliflower Crust Pizza" or "Pepperoni Pizza")
+  originalDishName?: string;            // Original dish identified from photo/voice
+  scannedImage?: string;                // Base64 thumbnail of the scanned food photo
+  loggedChoiceType: "original" | "healthier_alternative"; // Whether user logged the same dish or a healthier alternative
+  alternativeName?: string;             // If healthier alternative chosen, the alternative title
   calories: number;
   protein: number;
   carbs: number;
@@ -42,5 +46,6 @@ export interface AppleHealthSyncState {
   isAutoSyncEnabled: boolean;
   activity: AppleHealthActivity;
   loggedMeals: AppleHealthDietaryLog[];
-  syncMethod: "shortcut" | "file" | "manual";
+  syncMethod: "shortcut" | "manual";
 }
+

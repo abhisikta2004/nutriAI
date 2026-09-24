@@ -126,6 +126,9 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
         1
       );
 
+      if (data) {
+        data.scannedImage = base64;
+      }
       onAnalysis(data);
       toast.success("Food analyzed successfully!");
     } catch (error) {

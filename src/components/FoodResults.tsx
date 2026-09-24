@@ -37,6 +37,7 @@ interface FoodResultsProps {
     identifiedFood: string;
     confidence: number;
     healthScore?: number;
+    scannedImage?: string;
     nutritionInfo: {
       calories: number;
       protein: number;
@@ -247,6 +248,9 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
   const handleLogOriginalMeal = () => {
     logMealToAppleHealth({
       foodName: data.identifiedFood,
+      originalDishName: data.identifiedFood,
+      scannedImage: data.scannedImage,
+      loggedChoiceType: "original",
       calories: data.totalCalories || data.nutritionInfo.calories,
       protein: data.totalProtein || data.nutritionInfo.protein,
       carbs: data.totalCarbs || data.nutritionInfo.carbs,
@@ -262,6 +266,10 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
   const handleLogAlternative = (alt: Alternative) => {
     logMealToAppleHealth({
       foodName: alt.name,
+      originalDishName: data.identifiedFood,
+      alternativeName: alt.name,
+      scannedImage: data.scannedImage,
+      loggedChoiceType: "healthier_alternative",
       calories: alt.nutrition?.calories || 0,
       protein: alt.nutrition?.protein || 0,
       carbs: alt.nutrition?.carbs || 0,

@@ -12,7 +12,7 @@ interface AppleHealthContextType {
   syncState: AppleHealthSyncState;
   summary: AppleHealthSummary;
   lastSyncedText: string;
-  syncActivityData: (data: Partial<AppleHealthActivity>, method?: "shortcut" | "file" | "manual") => void;
+  syncActivityData: (data: Partial<AppleHealthActivity>, method?: "shortcut" | "manual") => void;
   logMealToAppleHealth: (meal: {
     foodName: string;
     calories: number;
@@ -24,9 +24,13 @@ interface AppleHealthContextType {
     sugar?: number;
     sodium?: number;
     source?: "NutriAI Scanner" | "Voice Advisor" | "Manual Log";
+    scannedImage?: string;
+    originalDishName?: string;
+    loggedChoiceType?: "original" | "healthier_alternative";
+    alternativeName?: string;
   }) => void;
-  importAppleHealthData: (fileContent: string) => boolean;
-  exportMealAsAppleHealthFile: (mealId?: string) => void;
+  deleteMealLog: (id: string) => void;
+  clearMealLogs: () => void;
   generateShortcutLink: () => string;
   disconnectAppleHealth: () => void;
 }
@@ -177,7 +181,7 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
 
   const lastSyncedText = computeLastSyncedText();
 
-  const syncActivityData = (data: Partial<AppleHealthActivity>, method: "shortcut" | "file" | "manual" = "manual") => {
+  const syncActivityData = (data: Partial<AppleHealthActivity>, method: "shortcut" | "manual" = "manual") => {
     setSyncState(prev => ({
       ...prev,
       isConnected: true,
@@ -188,8 +192,8 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
         lastSyncedAt: new Date().toISOString()
       }
     }));
-    toast.success("Apple Health activity synced successfully!", {
-      description: `Active Burn: ${data.activeEnergyBurned ?? syncState.activity.activeEnergyBurned} kcal • Steps: ${(data.stepCount ?? syncState.activity.stepCount).toLocaleString()}`
+    toast.success("Apple Health synced successfully! 🍎", {
+      description: `Active Calories: ${data.activeEnergyBurned ?? syncState.activity.activeEnergyBurned} kcal • Steps: ${(data.stepCount ?? syncState.activity.stepCount).toLocaleString()}`
     });
   };
 
@@ -204,10 +208,18 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
     sugar?: number;
     sodium?: number;
     source?: "NutriAI Scanner" | "Voice Advisor" | "Manual Log";
+    scannedImage?: string;
+    originalDishName?: string;
+    loggedChoiceType?: "original" | "healthier_alternative";
+    alternativeName?: string;
   }) => {
     const newLog: AppleHealthDietaryLog = {
-      id: "ah-" + Date.now(),
+      id: "meal-" + Date.now(),
       foodName: meal.foodName,
+      originalDishName: meal.originalDishName || meal.foodName,
+      scannedImage: meal.scannedImage,
+      loggedChoiceType: meal.loggedChoiceType || "original",
+      alternativeName: meal.alternativeName,
       calories: Math.round(meal.calories),
       protein: Math.round(meal.protein * 10) / 10,
       carbs: Math.round(meal.carbs * 10) / 10,
@@ -225,109 +237,34 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
       loggedMeals: [newLog, ...prev.loggedMeals]
     }));
 
-    toast.success(`Logged "${meal.foodName}" to Apple Health! 🍎`, {
-      description: `+${Math.round(meal.calories)} kcal • ${Math.round(meal.protein)}g Protein synced to HealthKit.`
+    const choiceLabel = meal.loggedChoiceType === "healthier_alternative" 
+      ? `Healthier Swap: "${meal.foodName}"` 
+      : `Dish: "${meal.foodName}"`;
+
+    toast.success(`Logged ${choiceLabel} to Apple Health! 🍎`, {
+      description: `+${Math.round(meal.calories)} kcal • ${Math.round(meal.protein)}g Protein recorded in Journal.`
     });
   };
 
-  const importAppleHealthData = (fileContent: string): boolean => {
-    try {
-      // 1. Try JSON format
-      if (fileContent.trim().startsWith("{")) {
-        const parsed = JSON.parse(fileContent);
-        const activity: Partial<AppleHealthActivity> = {};
-        
-        if (parsed.activeEnergyBurned || parsed.activeCalories || parsed.kcal || parsed.caloriesBurned) {
-          activity.activeEnergyBurned = Number(parsed.activeEnergyBurned || parsed.activeCalories || parsed.kcal || parsed.caloriesBurned);
-        }
-        if (parsed.stepCount || parsed.steps) {
-          activity.stepCount = Number(parsed.stepCount || parsed.steps);
-        }
-
-        syncActivityData(activity, "file");
-        return true;
-      }
-
-      // 2. Try Apple Health export.xml parsing
-      if (fileContent.includes("<HealthData") || fileContent.includes("<Record")) {
-        const stepMatch = fileContent.match(/type="HKQuantityTypeIdentifierStepCount"[^>]*value="([0-9.]+)"/g);
-        const energyMatch = fileContent.match(/type="HKQuantityTypeIdentifierActiveEnergyBurned"[^>]*value="([0-9.]+)"/g);
-
-        let totalSteps = 0;
-        if (stepMatch) {
-          stepMatch.slice(-30).forEach(m => {
-            const val = parseFloat(m.match(/value="([0-9.]+)"/)?.[1] || "0");
-            totalSteps += val;
-          });
-        }
-
-        let totalActiveEnergy = 0;
-        if (energyMatch) {
-          energyMatch.slice(-40).forEach(m => {
-            const val = parseFloat(m.match(/value="([0-9.]+)"/)?.[1] || "0");
-            totalActiveEnergy += val;
-          });
-        }
-
-        syncActivityData({
-          activeEnergyBurned: Math.round(totalActiveEnergy || 0),
-          stepCount: Math.round(totalSteps || 0),
-        }, "file");
-        return true;
-      }
-
-      throw new Error("Unrecognized Apple Health file format.");
-    } catch (e: any) {
-      toast.error("Failed to parse Apple Health file: " + (e?.message || "Invalid format"));
-      return false;
-    }
+  const deleteMealLog = (id: string) => {
+    setSyncState(prev => ({
+      ...prev,
+      loggedMeals: prev.loggedMeals.filter(m => m.id !== id)
+    }));
+    toast.info("Meal removed from food journal.");
   };
 
-  const exportMealAsAppleHealthFile = (mealId?: string) => {
-    const mealsToExport = mealId 
-      ? syncState.loggedMeals.filter(m => m.id === mealId)
-      : syncState.loggedMeals;
-
-    const exportData = {
-      exportSource: "NutriAI - Apple Health Bridge",
-      exportDate: new Date().toISOString(),
-      healthKitRecords: mealsToExport.map(m => ({
-        type: "HKQuantityTypeIdentifierDietaryEnergyConsumed",
-        value: m.calories,
-        unit: "kcal",
-        startDate: m.loggedAt,
-        endDate: m.loggedAt,
-        metadata: {
-          foodName: m.foodName,
-          proteinGrams: m.protein,
-          carbsGrams: m.carbs,
-          fatGrams: m.fat,
-          fiberGrams: m.fiber,
-          sodiumMg: m.sodium
-        }
-      }))
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `NutriAI_AppleHealth_Export_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Apple Health dataset exported successfully!");
+  const clearMealLogs = () => {
+    setSyncState(prev => ({
+      ...prev,
+      loggedMeals: []
+    }));
+    toast.info("Food journal cleared.");
   };
 
   const generateShortcutLink = () => {
-    // Generate Apple Shortcuts URL scheme template for 1-tap HealthKit syncing
-    return `shortcuts://run-shortcut?name=SyncNutriAI&input=text&text=${encodeURIComponent(
-      JSON.stringify({
-        app: "NutriAI",
-        callbackUrl: window?.location?.origin || "http://localhost:8080"
-      })
-    )}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://nutri-ai.vercel.app";
+    return `${origin}/?health_sync=1&kcal=500&steps=10000`;
   };
 
   const disconnectAppleHealth = () => {
@@ -354,8 +291,8 @@ export const AppleHealthProvider = ({ children }: { children: ReactNode }) => {
         lastSyncedText,
         syncActivityData,
         logMealToAppleHealth,
-        importAppleHealthData,
-        exportMealAsAppleHealthFile,
+        deleteMealLog,
+        clearMealLogs,
         generateShortcutLink,
         disconnectAppleHealth
       }}

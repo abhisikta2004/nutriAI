@@ -5,6 +5,7 @@ import { Camera, Sparkles, Heart, Brain, ArrowRight, CheckCircle2, Mic, Activity
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AppleHealthCard } from "@/components/AppleHealthCard";
+import { ScannedMealsJournal } from "@/components/ScannedMealsJournal";
 import Header from "@/components/Header";
 
 const Home = () => {
@@ -78,6 +79,11 @@ const Home = () => {
           {/* Apple Health Live Sync Overview */}
           <div className="max-w-3xl mx-auto pt-6 text-left">
             <AppleHealthCard />
+          </div>
+
+          {/* Scanned Meals & Food Journal */}
+          <div className="max-w-4xl mx-auto pt-8 text-left">
+            <ScannedMealsJournal />
           </div>
         </div>
       </section>

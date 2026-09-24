@@ -4,6 +4,7 @@ import { FoodScanner } from "@/components/FoodScanner";
 import { VoiceAdvisor } from "@/components/VoiceAdvisor";
 import { FoodResults } from "@/components/FoodResults";
 import { AppleHealthCard } from "@/components/AppleHealthCard";
+import { ScannedMealsJournal } from "@/components/ScannedMealsJournal";
 import { Utensils, Brain, ArrowLeft, Camera, Mic, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -95,6 +96,11 @@ const FoodAnalyzer = () => {
             <FoodResults data={analysisResult} />
           </div>
         )}
+
+        {/* Scanned Meals Journal */}
+        <div className="max-w-5xl mx-auto pt-8">
+          <ScannedMealsJournal />
+        </div>
 
         {/* Explainable AI Badge */}
         {!analysisResult && (
