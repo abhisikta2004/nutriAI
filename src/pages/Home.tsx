@@ -106,8 +106,8 @@ const Home = () => {
               </div>
               <h3 className="text-2xl font-bold text-foreground">Explainable AI</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Understand exactly why each recommendation is better with SHAP-inspired 
-                feature analysis showing calorie, protein, and nutrient comparisons.
+                Understand exactly why each recommendation is better with weighted nutrient contribution 
+                analysis showing calorie, protein, and nutrient comparisons.
               </p>
             </div>
           </Card>

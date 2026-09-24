@@ -24,6 +24,26 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
 
   const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+  const extractErrorMessage = async (error: unknown): Promise<string> => {
+    if (!error) return "An unexpected error occurred.";
+    if (typeof error === "string") return error;
+    
+    const ctx = (error as any)?.context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const body = await ctx.json();
+        if (body?.error) return body.error;
+        if (body?.message) return body.message;
+      } catch {
+        // ignore json parse error
+      }
+    }
+    if ((error as any)?.message) {
+      return (error as any).message;
+    }
+    return "Failed to analyze food. Please try again.";
+  };
+
   const invokeAnalyzeFood = async (body: any, retries = 1) => {
     let lastError: unknown;
 
@@ -86,16 +106,21 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
     };
     reader.readAsDataURL(file);
 
-    // Backend payload (optimized/compressed)
-    const base64 = await fileToOptimizedBase64(file);
+    try {
+      // Backend payload (optimized/compressed)
+      const base64 = await fileToOptimizedBase64(file);
 
-    if (scanMode === "detailed") {
-      // For detailed mode, first identify the food, then allow user to enter details
-      setPendingImage(base64);
-      await identifyFoodOnly(base64);
-    } else {
-      // Quick scan - analyze immediately
-      await analyzeFood(base64, null);
+      if (scanMode === "detailed") {
+        // For detailed mode, first identify the food, then allow user to enter details
+        setPendingImage(base64);
+        await identifyFoodOnly(base64);
+      } else {
+        // Quick scan - analyze immediately
+        await analyzeFood(base64, null);
+      }
+    } catch (err) {
+      console.error("Error processing image:", err);
+      toast.error("Failed to process image file. Please try another image.");
     }
   };
 
@@ -121,7 +146,8 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
       setIdentifiedFood(data?.identifiedFood || "Unknown Food");
     } catch (error) {
       console.error("Identification error:", error);
-      toast.error("Failed to identify food. Please try again.");
+      const msg = await extractErrorMessage(error);
+      toast.error(msg);
       setIdentifiedFood("Food Item");
     } finally {
       setIsAnalyzing(false);
@@ -156,7 +182,8 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
       setDetailedLog(null);
     } catch (error) {
       console.error("Analysis error:", error);
-      toast.error("Failed to analyze food. Please try again.");
+      const msg = await extractErrorMessage(error);
+      toast.error(msg);
     } finally {
       setIsAnalyzing(false);
     }

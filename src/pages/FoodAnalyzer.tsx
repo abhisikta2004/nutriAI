@@ -61,7 +61,7 @@ const FoodAnalyzer = () => {
           <div className="text-center pt-8">
             <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <Brain className="h-4 w-4" />
-              <span>Powered by SHAP-Inspired Explainable AI</span>
+              <span>Powered by Weighted Nutrient Contribution Analysis</span>
             </div>
           </div>
         )}

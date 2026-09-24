@@ -49,129 +49,12 @@ interface FoodResultsProps {
     totalCarbs?: number;
     totalFat?: number;
     servingInfo?: string;
+    alreadyOptimal?: boolean;
     alternatives: Alternative[];
     bestChoice?: Alternative;
     allergenWarning?: string[];
   };
 }
-
-// COMPREHENSIVE allergen keywords map for frontend fallback
-const allergenKeywords: { [key: string]: string[] } = {
-  // Dairy/Milk products
-  dairy: ['milk', 'cheese', 'butter', 'cream', 'yogurt', 'paneer', 'ghee', 'whey', 'casein', 'lactose', 'curd', 'kheer', 'kulfi', 'lassi', 'raita', 'malai', 'ice cream', 'milkshake', 'mozzarella', 'cheddar'],
-  milk: ['milk', 'dairy', 'cheese', 'butter', 'cream', 'yogurt', 'paneer', 'ghee', 'curd', 'kheer', 'kulfi', 'lassi', 'ice cream', 'milkshake', 'latte', 'cappuccino'],
-  lactose: ['milk', 'dairy', 'cheese', 'butter', 'cream', 'yogurt', 'paneer', 'curd', 'ice cream', 'lassi', 'kheer', 'kulfi', 'milkshake'],
-  
-  // Eggs
-  eggs: ['egg', 'mayonnaise', 'meringue', 'omelette', 'omelet', 'scrambled', 'cake', 'custard', 'pudding', 'pancake', 'waffle', 'french toast'],
-  egg: ['egg', 'mayonnaise', 'omelette', 'omelet', 'scrambled', 'cake', 'custard', 'pudding', 'pancake', 'waffle'],
-  
-  // Nuts
-  peanuts: ['peanut', 'groundnut', 'satay', 'peanut butter', 'chikki'],
-  peanut: ['peanut', 'groundnut', 'peanut butter', 'chikki'],
-  nuts: ['almond', 'walnut', 'cashew', 'pistachio', 'hazelnut', 'peanut', 'groundnut', 'badam', 'kaju', 'pista', 'akhrot', 'chikki', 'praline'],
-  'tree nuts': ['almond', 'walnut', 'cashew', 'pistachio', 'hazelnut', 'macadamia', 'pecan', 'badam', 'kaju', 'pista', 'akhrot'],
-  almond: ['almond', 'badam', 'marzipan', 'macaroon'],
-  cashew: ['cashew', 'kaju', 'kaju katli', 'kaju barfi'],
-  walnut: ['walnut', 'akhrot', 'brownie'],
-  pistachio: ['pistachio', 'pista', 'kulfi'],
-  
-  // Soy
-  soy: ['soy', 'soya', 'tofu', 'tempeh', 'edamame', 'miso', 'soy sauce', 'soy milk'],
-  soya: ['soy', 'soya', 'tofu', 'tempeh', 'edamame', 'miso'],
-  
-  // Wheat/Gluten
-  wheat: ['wheat', 'bread', 'flour', 'pasta', 'noodle', 'roti', 'chapati', 'naan', 'paratha', 'poori', 'puri', 'samosa', 'pakora', 'pizza', 'cake', 'cookie', 'biscuit', 'maida', 'atta'],
-  gluten: ['wheat', 'barley', 'rye', 'oats', 'bread', 'pasta', 'noodle', 'pizza', 'cake', 'cookie', 'biscuit', 'roti', 'chapati', 'naan', 'paratha', 'samosa', 'pakora'],
-  
-  // Seafood
-  fish: ['fish', 'salmon', 'tuna', 'cod', 'sardine', 'anchovy', 'mackerel', 'pomfret', 'rohu', 'hilsa', 'surmai', 'rawas', 'fish curry', 'fish fry'],
-  shellfish: ['shrimp', 'prawn', 'crab', 'lobster', 'oyster', 'mussel', 'clam', 'scallop', 'squid', 'calamari', 'jhinga'],
-  seafood: ['fish', 'shrimp', 'prawn', 'crab', 'lobster', 'salmon', 'tuna', 'pomfret', 'surmai', 'rawas'],
-  prawn: ['prawn', 'shrimp', 'jhinga'],
-  shrimp: ['shrimp', 'prawn', 'jhinga'],
-  
-  // Other
-  sesame: ['sesame', 'tahini', 'hummus', 'til'],
-  mustard: ['mustard', 'sarson', 'rai'],
-  
-  // Meat (for vegetarians)
-  'non-veg': ['chicken', 'mutton', 'lamb', 'beef', 'pork', 'fish', 'prawn', 'shrimp', 'crab', 'egg', 'meat', 'bacon', 'kebab', 'tikka', 'tandoori', 'biryani'],
-  meat: ['chicken', 'mutton', 'lamb', 'beef', 'pork', 'meat', 'bacon', 'ham', 'sausage', 'kebab'],
-  chicken: ['chicken', 'butter chicken', 'chicken curry', 'chicken tikka', 'tandoori chicken', 'chicken biryani', 'fried chicken'],
-};
-
-// Food composition map - what allergens common foods contain
-const foodAllergenMap: { [key: string]: string[] } = {
-  'butter chicken': ['dairy', 'lactose', 'chicken', 'milk'],
-  'paneer': ['dairy', 'lactose', 'milk'],
-  'cheese': ['dairy', 'lactose', 'milk'],
-  'pizza': ['dairy', 'wheat', 'gluten', 'cheese', 'milk'],
-  'pasta': ['wheat', 'gluten'],
-  'naan': ['wheat', 'gluten', 'dairy'],
-  'cake': ['wheat', 'gluten', 'eggs', 'dairy', 'egg', 'milk'],
-  'ice cream': ['dairy', 'lactose', 'milk'],
-  'biryani': ['wheat', 'gluten'],
-  'samosa': ['wheat', 'gluten'],
-  'pakora': ['wheat', 'gluten'],
-  'kheer': ['dairy', 'milk', 'nuts'],
-  'gulab jamun': ['dairy', 'wheat', 'milk', 'gluten'],
-  'kulfi': ['dairy', 'milk', 'nuts', 'pistachio'],
-  'lassi': ['dairy', 'milk', 'lactose'],
-  'korma': ['dairy', 'nuts', 'milk'],
-  'fish curry': ['fish', 'seafood'],
-  'prawn curry': ['shellfish', 'seafood', 'prawn', 'shrimp'],
-  'egg curry': ['eggs', 'egg'],
-  'omelette': ['eggs', 'egg'],
-  'french toast': ['eggs', 'wheat', 'dairy', 'egg', 'milk'],
-  'pancake': ['eggs', 'wheat', 'dairy', 'egg', 'milk'],
-  'brownie': ['eggs', 'wheat', 'dairy', 'egg', 'milk', 'walnut', 'nuts'],
-  'custard': ['eggs', 'dairy', 'egg', 'milk'],
-};
-
-const checkForAllergens = (foodName: string, userAllergies: string[]): string[] => {
-  const foundAllergens: string[] = [];
-  const lowerFoodName = foodName.toLowerCase();
-  
-  for (const allergy of userAllergies) {
-    const allergyLower = allergy.toLowerCase().trim();
-    if (!allergyLower) continue;
-    
-    // Check 1: Direct match in food name
-    if (lowerFoodName.includes(allergyLower)) {
-      if (!foundAllergens.includes(allergy)) {
-        foundAllergens.push(allergy);
-      }
-      continue;
-    }
-    
-    // Check 2: Keyword-based detection
-    const keywords = allergenKeywords[allergyLower] || [];
-    for (const keyword of keywords) {
-      if (lowerFoodName.includes(keyword.toLowerCase())) {
-        if (!foundAllergens.includes(allergy)) {
-          foundAllergens.push(allergy);
-        }
-        break;
-      }
-    }
-    
-    // Check 3: Food composition map
-    for (const [food, containedAllergens] of Object.entries(foodAllergenMap)) {
-      if (lowerFoodName.includes(food)) {
-        if (containedAllergens.includes(allergyLower) || 
-            containedAllergens.some(a => allergyLower.includes(a) || a.includes(allergyLower))) {
-          if (!foundAllergens.includes(allergy)) {
-            foundAllergens.push(allergy);
-          }
-          break;
-        }
-      }
-    }
-  }
-  
-  return foundAllergens;
-};
 
 // Reusable Alternative Card Component
 const AlternativeCard = ({ 
@@ -267,10 +150,8 @@ const AlternativeCard = ({
 export const FoodResults = ({ data }: FoodResultsProps) => {
   const { profile } = useUserProfile();
   
-  // Use backend allergen warning if available, otherwise fallback to frontend detection
-  const detectedAllergens = data.allergenWarning && data.allergenWarning.length > 0 
-    ? data.allergenWarning 
-    : checkForAllergens(data.identifiedFood, profile.allergies);
+  // Single source of truth: Trust backend allergen warning
+  const detectedAllergens = data.allergenWarning || [];
   
   const getHealthBadgeVariant = (score: number): "default" | "secondary" | "destructive" | "outline" => {
     if (score >= 80) return "default";
@@ -278,12 +159,12 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
     return "outline";
   };
 
-  const bestChoice = data.bestChoice || 
-    (data.alternatives.length > 0 
-      ? data.alternatives.reduce((a, b) => a.healthScore > b.healthScore ? a : b)
-      : null);
+  const regularAlternatives = data.alternatives || [];
 
-  const regularAlternatives = data.alternatives;
+  const bestChoice = data.bestChoice || 
+    (regularAlternatives.length > 0 
+      ? regularAlternatives.reduce((a, b) => a.healthScore > b.healthScore ? a : b)
+      : null);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -371,59 +252,87 @@ export const FoodResults = ({ data }: FoodResultsProps) => {
         </div>
       </Card>
 
-      {/* Best Choice Highlight */}
-      {bestChoice && (
-        <Card className="p-6 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-2 border-primary/30 shadow-elevated animate-in zoom-in-95 duration-300">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-full bg-primary text-primary-foreground">
-              <Trophy className="h-5 w-5" />
+      {/* Already Optimal State */}
+      {(data.alreadyOptimal || (!bestChoice && regularAlternatives.length === 0)) ? (
+        <Card className="p-6 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border-2 border-emerald-500/30 shadow-elevated animate-in zoom-in-95 duration-300">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                Best Choice for You
-                <Star className="h-4 w-4 text-accent fill-accent" />
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Already an Optimal Choice
+                </Badge>
+                <span className="text-xs text-muted-foreground font-medium">Top Tier Nutrition</span>
+              </div>
+              <h3 className="text-xl font-bold text-foreground">
+                "{data.identifiedFood}" is already a great nutritional choice!
               </h3>
-              <p className="text-sm text-muted-foreground">Based on your goals and preferences</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold text-foreground">{bestChoice.name}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {bestChoice.benefits.slice(0, 2).join(" • ")}
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Based on our model scoring and your profile goals ({profile.dietPreference}, goal: {profile.targetBodyType}), 
+                this food already has an excellent nutrient balance. No healthier alternatives are needed — keep enjoying this smart meal!
               </p>
-            </div>
-            <div className="text-right">
-              <Badge className="text-lg px-4 py-2 bg-primary text-primary-foreground">
-                Score: {bestChoice.healthScore}
-              </Badge>
             </div>
           </div>
         </Card>
-      )}
+      ) : (
+        <>
+          {/* Best Choice Highlight */}
+          {bestChoice && (
+            <Card className="p-6 bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-2 border-primary/30 shadow-elevated animate-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-primary text-primary-foreground">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                    Best Choice for You
+                    <Star className="h-4 w-4 text-accent fill-accent" />
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Based on your goals and preferences</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{bestChoice.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {bestChoice.benefits.slice(0, 2).join(" • ")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Badge className="text-lg px-4 py-2 bg-primary text-primary-foreground">
+                    Score: {bestChoice.healthScore}
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+          )}
 
-      {/* Similar Alternatives */}
-      {regularAlternatives.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <h3 className="text-xl font-bold text-foreground">Similar Healthier Alternatives</h3>
-          </div>
+          {/* Similar Alternatives */}
+          {regularAlternatives.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-bold text-foreground">Similar Healthier Alternatives</h3>
+              </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {regularAlternatives.map((alt, idx) => (
-              <AlternativeCard
-                key={idx}
-                alt={alt}
-                isBest={bestChoice?.name === alt.name}
-                originalFood={data.identifiedFood}
-                originalNutrition={data.nutritionInfo}
-                getHealthBadgeVariant={getHealthBadgeVariant}
-              />
-            ))}
-          </div>
-        </div>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {regularAlternatives.map((alt, idx) => (
+                  <AlternativeCard
+                    key={idx}
+                    alt={alt}
+                    isBest={bestChoice?.name === alt.name}
+                    originalFood={data.identifiedFood}
+                    originalNutrition={data.nutritionInfo}
+                    getHealthBadgeVariant={getHealthBadgeVariant}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
     </div>
