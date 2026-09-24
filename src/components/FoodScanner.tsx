@@ -148,7 +148,8 @@ export const FoodScanner = ({ onAnalysis }: FoodScannerProps) => {
       console.error("Identification error:", error);
       const msg = await extractErrorMessage(error);
       toast.error(msg);
-      setIdentifiedFood("Food Item");
+      setIdentifiedFood("");
+      setPendingImage(null);
     } finally {
       setIsAnalyzing(false);
     }

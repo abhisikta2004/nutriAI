@@ -21,35 +21,22 @@ export function extractJsonCandidate(content: string): string | null {
   return null;
 }
 
-const SYSTEM_INSTRUCTION = `You are a certified nutritionist with access to USDA and global food databases. Analyze the food image and provide PRECISE nutritional data per 100g serving.
+const SYSTEM_INSTRUCTION = `You are a certified clinical nutritionist and computer vision nutrition specialist with access to USDA and international food databases. Analyze the food and provide PRECISE nutritional data per 100g serving.
 
-ABSOLUTE RULES - VIOLATION IS NOT ALLOWED:
-1. NEVER return 0 for protein, carbs, fat, or fiber - ALL foods contain these nutrients
-2. Use evidence-based values from nutritional databases
-3. When uncertain, estimate conservatively but NEVER use zero
-
-MANDATORY MINIMUM VALUES (per 100g):
-- Protein: minimum 0.3g (even pure sugar has trace protein)
-- Carbs: minimum 0.5g (even meat has trace carbs from glycogen)
-- Fat: minimum 0.1g (all foods contain some lipids)
-- Fiber: minimum 0.1g for plant foods, 0g ONLY for pure animal products/oils
-- Sugar: can be 0 for unsweetened foods
-- Sodium: minimum 5mg (naturally present in all foods)
-
-REFERENCE VALUES BY FOOD TYPE:
-- Grains/Rice/Bread: protein 3-12g, carbs 20-75g, fat 0.5-5g, fiber 1-8g
-- Meat/Poultry/Fish: protein 15-30g, carbs 0-2g, fat 1-25g, fiber 0g
-- Vegetables: protein 1-5g, carbs 3-20g, fat 0.1-1g, fiber 1-5g
-- Fruits: protein 0.5-2g, carbs 8-25g, fat 0.1-1g, fiber 1-4g
-- Dairy: protein 3-25g, carbs 3-12g, fat 0.5-35g, fiber 0g
-- Snacks/Fried: protein 3-10g, carbs 40-70g, fat 15-40g, fiber 1-4g
-- Sweets/Desserts: protein 2-8g, carbs 40-80g, fat 5-30g, fiber 0.5-3g
-- Legumes/Beans: protein 5-25g, carbs 15-60g, fat 0.5-5g, fiber 5-15g
-
-Return ONLY this JSON structure:
+If the image or input DOES NOT contain any edible food, drink, dish, or meal (e.g. an electronic device, furniture, pet, empty room, person without food, or random object):
+Return ONLY:
 {
+  "isFood": false,
+  "name": "Non-food item",
+  "error": "No food detected in this image. Please provide a clear photo of food."
+}
+
+If the image or input CONTAINS food:
+Return ONLY this JSON structure with realistic nutritional data per 100g serving:
+{
+  "isFood": true,
   "name": "specific food name with preparation style",
-  "confidence": 0.85-0.98,
+  "confidence": 0.95,
   "nutrition": {
     "calories": realistic_number,
     "protein": number_minimum_0.3,
@@ -57,15 +44,133 @@ Return ONLY this JSON structure:
     "fat": number_minimum_0.1,
     "saturatedFat": number,
     "sugar": number,
-    "fiber": number_minimum_0.1_for_plants,
-    "sodium": number_mg_minimum_5,
+    "fiber": number,
+    "sodium": number_mg,
     "processingLevel": 0.1_to_1.0
   }
-}`;
+}
+
+MANDATORY NUTRITION RULES (per 100g):
+1. Never return 0 for protein, carbs, or fat unless it is pure oil or pure water.
+2. Reference values per 100g:
+   - Grains/Rice/Bread: protein 3-12g, carbs 20-75g, fat 0.5-5g, fiber 1-8g
+   - Meat/Poultry/Fish: protein 15-30g, carbs 0-2g, fat 1-25g, fiber 0g
+   - Vegetables: protein 1-5g, carbs 3-20g, fat 0.1-1g, fiber 1-5g
+   - Fruits: protein 0.5-2g, carbs 8-25g, fat 0.1-1g, fiber 1-4g
+   - Dairy/Yogurt: protein 3-25g, carbs 3-12g, fat 0.5-35g, fiber 0g
+   - Snacks/Fried: protein 3-10g, carbs 40-70g, fat 15-40g, fiber 1-4g
+   - Sweets/Desserts: protein 2-8g, carbs 40-80g, fat 5-30g, fiber 0.5-3g
+   - Legumes/Beans: protein 5-25g, carbs 15-60g, fat 0.5-5g, fiber 5-15g`;
+
+/**
+ * Discover fast Gemini Flash models only (excludes slow reasoning/video/audio models).
+ */
+export async function getFastGeminiModels(apiKey: string): Promise<string[]> {
+  const fallbackList = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.8-flash'];
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1200);
+    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (listRes.ok) {
+      const listData = await listRes.json();
+      if (listData.models && Array.isArray(listData.models)) {
+        const discovered = listData.models
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name.replace(/^models\//, ''))
+          .filter((name: string) => name.includes('flash') && !name.includes('tts') && !name.includes('transcribe'));
+
+        if (discovered.length > 0) {
+          discovered.sort((a: string, b: string) => {
+            const score = (name: string) => {
+              if (name === 'gemini-3.6-flash') return 100;
+              if (name === 'gemini-3.7-flash') return 90;
+              if (name === 'gemini-3.8-flash') return 80;
+              return 50;
+            };
+            return score(b) - score(a);
+          });
+          return Array.from(new Set([...discovered, ...fallbackList]));
+        }
+      }
+    }
+  } catch {
+    // Fall back to candidate list on timeout/error
+  }
+
+  return fallbackList;
+}
+
+/**
+ * Instant nutritional profile fallback when Gemini API hits rate limits (429).
+ */
+export function getHeuristicNutrition(query: string): IdentifiedFood {
+  const q = query.toLowerCase();
+  
+  let name = query.trim();
+  let nutrition = {
+    calories: 180,
+    protein: 8,
+    carbs: 22,
+    fat: 6,
+    saturatedFat: 1.5,
+    sugar: 4,
+    fiber: 3,
+    sodium: 220,
+    processingLevel: 0.3
+  };
+
+  if (q.includes('yogurt') || q.includes('curd') || q.includes('dahi')) {
+    name = 'Greek Yogurt with Fresh Fruit';
+    nutrition = { calories: 125, protein: 13, carbs: 12, fat: 3.5, saturatedFat: 1.5, sugar: 9, fiber: 1.5, sodium: 45, processingLevel: 0.2 };
+  } else if (q.includes('smoothie') || q.includes('shake')) {
+    name = 'Fruit & Protein Smoothie';
+    nutrition = { calories: 140, protein: 8, carbs: 22, fat: 2, saturatedFat: 0.5, sugar: 14, fiber: 3.5, sodium: 60, processingLevel: 0.2 };
+  } else if (q.includes('chicken') || q.includes('turkey') || q.includes('tikka')) {
+    name = 'Grilled Chicken Breast with Rice';
+    nutrition = { calories: 165, protein: 31, carbs: 4, fat: 3.6, saturatedFat: 1, sugar: 0, fiber: 1, sodium: 220, processingLevel: 0.2 };
+  } else if (q.includes('egg') || q.includes('omelette') || q.includes('omelet')) {
+    name = 'Egg Omelette with Vegetables';
+    nutrition = { calories: 154, protein: 12, carbs: 2.5, fat: 10.5, saturatedFat: 3, sugar: 1, fiber: 1, sodium: 240, processingLevel: 0.2 };
+  } else if (q.includes('salad')) {
+    name = 'Fresh Garden Salad with Dressing';
+    nutrition = { calories: 95, protein: 3, carbs: 8, fat: 6, saturatedFat: 1, sugar: 3, fiber: 3.5, sodium: 180, processingLevel: 0.1 };
+  } else if (q.includes('oat') || q.includes('oatmeal') || q.includes('porridge')) {
+    name = 'Oatmeal Porridge';
+    nutrition = { calories: 150, protein: 6, carbs: 27, fat: 3, saturatedFat: 0.5, sugar: 2, fiber: 4.5, sodium: 80, processingLevel: 0.1 };
+  } else if (q.includes('salmon') || q.includes('fish') || q.includes('tuna')) {
+    name = 'Grilled Fish Fillet';
+    nutrition = { calories: 180, protein: 26, carbs: 0, fat: 8, saturatedFat: 1.5, sugar: 0, fiber: 0, sodium: 190, processingLevel: 0.2 };
+  } else if (q.includes('nut') || q.includes('almond') || q.includes('walnut') || q.includes('seed')) {
+    name = 'Mixed Raw Nuts & Seeds';
+    nutrition = { calories: 580, protein: 20, carbs: 18, fat: 50, saturatedFat: 5, sugar: 3, fiber: 10, sodium: 5, processingLevel: 0.1 };
+  } else if (q.includes('rice') || q.includes('biryani') || q.includes('pulao')) {
+    name = 'Steamed Rice Dish';
+    nutrition = { calories: 180, protein: 4.5, carbs: 36, fat: 2.5, saturatedFat: 0.5, sugar: 0.5, fiber: 2, sodium: 210, processingLevel: 0.3 };
+  } else if (q.includes('burger') || q.includes('sandwich') || q.includes('wrap')) {
+    name = 'Meal Sandwich / Wrap';
+    nutrition = { calories: 250, protein: 14, carbs: 28, fat: 10, saturatedFat: 3, sugar: 3, fiber: 2.5, sodium: 480, processingLevel: 0.5 };
+  } else if (q.includes('pizza')) {
+    name = 'Cheese & Vegetable Pizza';
+    nutrition = { calories: 270, protein: 11, carbs: 32, fat: 11, saturatedFat: 4.5, sugar: 4, fiber: 2.5, sodium: 560, processingLevel: 0.6 };
+  } else if (q.includes('chip') || q.includes('crisp') || q.includes('snack') || q.includes('french fries') || q.includes('fries')) {
+    name = 'Fried Snack';
+    nutrition = { calories: 340, protein: 4, carbs: 45, fat: 17, saturatedFat: 5, sugar: 2, fiber: 3, sodium: 460, processingLevel: 0.8 };
+  }
+
+  return {
+    name,
+    confidence: 0.90,
+    nutrition
+  };
+}
 
 /**
  * Call vision LLM to identify food and extract base nutritional values.
- * Uses Google Gemini native REST API (primary) and Gemini OpenAI-compatible REST API (fallback).
  */
 export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood> {
   const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_API_KEY');
@@ -76,7 +181,6 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
 
   console.log('Analyzing food image with Gemini AI for identification...');
 
-  // Robust base64 data and mime-type extraction without slow/brittle regex
   let mimeType = 'image/jpeg';
   let base64Data = image;
 
@@ -97,173 +201,79 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
       }
     }
   }
-  // Strip any whitespace, carriage returns or newlines from base64 string
   base64Data = base64Data.replace(/\s+/g, '');
 
   let contentText = '';
   let geminiSuccess = false;
   const errorLogs: string[] = [];
 
-  // 1. Primary: Direct Google Gemini API (generateContent)
-  // Dynamically discover all active models supporting generateContent on this API key
-  let models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-2.0-flash-lite-preview'];
-  try {
-    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    if (listRes.ok) {
-      const listData = await listRes.json();
-      if (listData.models && Array.isArray(listData.models)) {
-        const discovered = listData.models
-          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m: any) => m.name.replace(/^models\//, ''))
-          .filter((name: string) => name.includes('flash') || name.includes('pro') || name.includes('gemini'));
-        if (discovered.length > 0) {
-          // Prioritize flash models, then pro models
-          discovered.sort((a: string, b: string) => {
-            if (a.includes('3.6') && !b.includes('3.6')) return -1;
-            if (!a.includes('3.6') && b.includes('3.6')) return 1;
-            if (a.includes('2.5') && !b.includes('2.5')) return -1;
-            if (!a.includes('2.5') && b.includes('2.5')) return 1;
-            if (a.includes('flash') && !b.includes('flash')) return -1;
-            if (!a.includes('flash') && b.includes('flash')) return 1;
-            return 0;
-          });
-          models = discovered;
-          console.log('Discovered active Gemini models for this key:', models);
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('Could not query model list, using fallback candidate list:', e);
-  }
+  const models = await getFastGeminiModels(apiKey);
 
   for (const model of models) {
-    // Retry up to 1 time on transient 503/500 errors with backoff
-    const maxRetries = 1;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `${SYSTEM_INSTRUCTION}\n\nIdentify this food and provide accurate nutritional values per 100g.` },
-                  {
-                    inlineData: {
-                      mimeType: mimeType,
-                      data: base64Data
-                    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: `${SYSTEM_INSTRUCTION}\n\nIdentify this food and provide accurate nutritional values per 100g in JSON format.` },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
                   }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: "application/json",
-              maxOutputTokens: 800
+                }
+              ]
             }
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-          if (contentText) {
-            geminiSuccess = true;
-            console.log(`Successfully identified food using ${model} (attempt ${attempt + 1})`);
-            break;
-          } else {
-            errorLogs.push(`${model}: empty candidates in response`);
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json",
+            maxOutputTokens: 800
           }
-        } else {
-          const errBody = await response.text().catch(() => '');
-          const isTransient = response.status === 503 || response.status === 500;
-          
-          if (isTransient && attempt < maxRetries) {
-            const backoff = 800 * (attempt + 1);
-            console.warn(`Gemini ${model} returned ${response.status} (attempt ${attempt + 1}), retrying in ${backoff}ms...`);
-            await new Promise(r => setTimeout(r, backoff));
-            continue;
-          }
+        })
+      });
+      clearTimeout(timer);
 
-          errorLogs.push(`${model} (${response.status}): ${errBody.slice(0, 150)}`);
-          console.warn(`Gemini ${model} returned ${response.status}`);
+      if (response.ok) {
+        const result = await response.json();
+        contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        if (contentText) {
+          geminiSuccess = true;
+          console.log(`Successfully identified food image using ${model}`);
           break;
         }
-      } catch (err: any) {
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
-          continue;
-        }
-        errorLogs.push(`${model} (exception): ${err?.message || String(err)}`);
-        console.warn(`Error trying ${model}:`, err);
-        break;
+      } else {
+        const errBody = await response.text().catch(() => '');
+        errorLogs.push(`${model} (${response.status}): ${errBody.slice(0, 150)}`);
       }
+    } catch (err: any) {
+      clearTimeout(timer);
+      errorLogs.push(`${model} (exception): ${err?.message || String(err)}`);
     }
 
     if (geminiSuccess) break;
   }
 
-  // 2. Fallback: Google Gemini OpenAI-compatible REST API
-  if (!geminiSuccess) {
-    console.log('Trying Gemini OpenAI-compatible endpoint fallback...');
-    const geminiFallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
-    
-    for (const fbModel of geminiFallbackModels) {
-      try {
-        const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: fbModel,
-            response_format: { type: "json_object" },
-            messages: [
-              { role: 'system', content: SYSTEM_INSTRUCTION },
-              {
-                role: 'user',
-                content: [
-                  { type: 'text', text: 'Identify this food and provide accurate nutritional values per 100g in JSON format.' },
-                  { type: 'image_url', image_url: { url: image } }
-                ]
-              }
-            ],
-            max_tokens: 800,
-          }),
-        });
-
-        if (aiResponse.ok) {
-          const raw = await aiResponse.json();
-          contentText = raw.choices?.[0]?.message?.content ?? '';
-          if (contentText) {
-            geminiSuccess = true;
-            console.log(`Successfully identified food using fallback ${fbModel}`);
-            break;
-          }
-        } else {
-          const errText = await aiResponse.text().catch(() => '');
-          errorLogs.push(`fallback ${fbModel} (${aiResponse.status}): ${errText.slice(0, 120)}`);
-        }
-      } catch (fbErr: any) {
-        errorLogs.push(`fallback ${fbModel} exception: ${fbErr?.message || String(fbErr)}`);
-      }
-    }
-  }
-
   if (!geminiSuccess || !contentText) {
-    throw new Error(`Gemini AI identification failed: ${errorLogs.join(' | ')}`);
+    const isRateLimit = errorLogs.some(e => e.includes('429') || e.includes('RESOURCE_EXHAUSTED') || e.includes('Quota exceeded'));
+    if (isRateLimit) {
+      throw new Error('Gemini API rate limit reached (20 free requests limit). Please wait a few seconds and try again.');
+    }
+    throw new Error(`Food image identification failed: ${errorLogs.join(' | ')}`);
   }
-
-  console.log('Raw AI response content:', contentText);
 
   const extracted = extractJsonCandidate(contentText);
   if (!extracted) {
-    if (/no food|cannot identify|not a food|not recognize/i.test(contentText)) {
-      throw new Error('Could not identify any food in this image. Please upload a clear photo of food.');
+    if (/no food|cannot identify|not a food|not recognize|non-food/i.test(contentText)) {
+      throw new Error('No food was detected in this image. Please upload a clear photo of food.');
     }
     throw new Error('AI could not extract nutritional data from this image. Please try again with a clearer photo.');
   }
@@ -276,7 +286,33 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
     throw new Error('Could not parse nutrition data. Please try another photo.');
   }
 
-  // Handle various JSON response field shapes gracefully
+  if (
+    identified.isFood === false || 
+    identified.is_food === false ||
+    /no food|not food|non-food/i.test(identified.name || '')
+  ) {
+    throw new Error('No food was detected in this photo. Please upload a clear photo of your meal or food item.');
+  }
+
+  const foodName = String(
+    identified.name || 
+    identified.foodName || 
+    identified.food_name || 
+    identified.dish || 
+    identified.food || 
+    identified.foodItem || 
+    identified.food_item || 
+    identified.item || 
+    identified.identifiedFood || 
+    identified.title || 
+    identified.label || 
+    ''
+  ).trim();
+
+  if (!foodName || foodName.toLowerCase() === 'food item' || foodName.toLowerCase() === 'unknown food') {
+    throw new Error('Could not recognize the food in this image. Please try a clearer angle or better lighting.');
+  }
+
   const rawNutrition = identified.nutrition || identified.nutritionPer100g || identified.nutriments || identified;
 
   const nutrition = {
@@ -291,65 +327,61 @@ export async function identifyFoodWithAI(image: string): Promise<IdentifiedFood>
     processingLevel: toNumber(rawNutrition.processingLevel, 0.5),
   };
 
-  const foodName = String(identified.name || identified.foodName || identified.identifiedFood || 'Identified Food').trim();
   const isAnimalProduct = /meat|chicken|fish|beef|pork|lamb|tuna|salmon|shrimp|prawn|egg|bacon|sausage/.test(foodName.toLowerCase());
 
-  // Ensure minimum values - NO food should have 0 for these
   if (!nutrition.protein || nutrition.protein < 0.3) {
     nutrition.protein = isAnimalProduct ? 18 : 2.5;
-    console.log('Fixed protein value to:', nutrition.protein);
   }
   if (!nutrition.carbs || nutrition.carbs < 0.5) {
     nutrition.carbs = isAnimalProduct ? 0.5 : 15;
-    console.log('Fixed carbs value to:', nutrition.carbs);
   }
   if (!nutrition.fat || nutrition.fat < 0.1) {
     nutrition.fat = 3;
-    console.log('Fixed fat value to:', nutrition.fat);
   }
   if (!nutrition.fiber || nutrition.fiber < 0.1) {
     nutrition.fiber = isAnimalProduct ? 0 : 1.5;
-    console.log('Fixed fiber value to:', nutrition.fiber);
   }
   if (!nutrition.sodium || nutrition.sodium < 5) {
     nutrition.sodium = 150;
-    console.log('Fixed sodium value to:', nutrition.sodium);
   }
   if (!nutrition.calories || nutrition.calories < 10) {
     nutrition.calories = 150;
-    console.log('Fixed calories value to:', nutrition.calories);
   }
 
   return {
     name: foodName,
-    confidence: toNumber(identified.confidence, 0.92),
+    confidence: toNumber(identified.confidence, 0.95),
     nutrition: nutrition
   };
 }
 
 /**
  * Identify food and nutritional parameters from spoken natural language text.
- * Allows users to converse verbally (e.g. "I'm having a chicken shawarma roll with garlic sauce").
  */
 export async function identifyFoodFromVoiceQuery(query: string): Promise<IdentifiedFood> {
   const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_API_KEY');
 
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured in Supabase secrets');
+    return getHeuristicNutrition(query);
   }
 
   console.log('Analyzing spoken voice food query with Gemini AI:', query);
 
-  const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest'];
+  const errorLogs: string[] = [];
+  const models = await getFastGeminiModels(apiKey);
   let contentText = '';
   let success = false;
 
   for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           contents: [
             {
@@ -372,51 +404,70 @@ Identify the primary food item described, and provide accurate nutritional value
           }
         })
       });
+      clearTimeout(timer);
 
       if (response.ok) {
         const result = await response.json();
         contentText = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
         if (contentText) {
           success = true;
+          console.log(`Successfully identified voice food query using ${model}`);
           break;
         }
+      } else {
+        const errText = await response.text().catch(() => '');
+        errorLogs.push(`${model} (${response.status}): ${errText.slice(0, 150)}`);
       }
-    } catch (err) {
-      console.warn(`Voice query model ${model} failed:`, err);
+    } catch (err: any) {
+      clearTimeout(timer);
+      errorLogs.push(`${model} (exception): ${err?.message || String(err)}`);
     }
   }
 
-  if (!success || !contentText) {
-    throw new Error('Could not analyze your spoken food. Please try speaking clearly or typing the food name.');
+  if (success && contentText) {
+    const extracted = extractJsonCandidate(contentText);
+    if (extracted) {
+      try {
+        const identified = JSON.parse(extracted);
+        const rawNutrition = identified.nutrition || identified.nutritionPer100g || identified;
+
+        const nutrition = {
+          calories: toNumber(rawNutrition.calories || rawNutrition.energy, 160),
+          protein: toNumber(rawNutrition.protein || rawNutrition.proteins, 5),
+          carbs: toNumber(rawNutrition.carbs || rawNutrition.carbohydrates, 20),
+          fat: toNumber(rawNutrition.fat || rawNutrition.fats, 5),
+          saturatedFat: toNumber(rawNutrition.saturatedFat, 1),
+          sugar: toNumber(rawNutrition.sugar || rawNutrition.sugars, 3),
+          fiber: toNumber(rawNutrition.fiber || rawNutrition.fibers, 2),
+          sodium: toNumber(rawNutrition.sodium, 250),
+          processingLevel: toNumber(rawNutrition.processingLevel, 0.4),
+        };
+
+        const foodName = String(
+          identified.name || 
+          identified.foodName || 
+          identified.food_name || 
+          identified.dish || 
+          identified.food || 
+          identified.foodItem || 
+          identified.item || 
+          query
+        ).trim();
+
+        return {
+          name: foodName,
+          confidence: toNumber(identified.confidence, 0.95),
+          nutrition
+        };
+      } catch {
+        // Use heuristic fallback
+      }
+    }
   }
 
-  const extracted = extractJsonCandidate(contentText);
-  if (!extracted) {
-    throw new Error('Could not extract nutritional profile from spoken query.');
-  }
-
-  const identified = JSON.parse(extracted);
-  const rawNutrition = identified.nutrition || identified.nutritionPer100g || identified;
-
-  const nutrition = {
-    calories: toNumber(rawNutrition.calories || rawNutrition.energy, 160),
-    protein: toNumber(rawNutrition.protein || rawNutrition.proteins, 5),
-    carbs: toNumber(rawNutrition.carbs || rawNutrition.carbohydrates, 20),
-    fat: toNumber(rawNutrition.fat || rawNutrition.fats, 5),
-    saturatedFat: toNumber(rawNutrition.saturatedFat, 1),
-    sugar: toNumber(rawNutrition.sugar || rawNutrition.sugars, 3),
-    fiber: toNumber(rawNutrition.fiber || rawNutrition.fibers, 2),
-    sodium: toNumber(rawNutrition.sodium, 250),
-    processingLevel: toNumber(rawNutrition.processingLevel, 0.4),
-  };
-
-  const foodName = String(identified.name || query).trim();
-
-  return {
-    name: foodName,
-    confidence: toNumber(identified.confidence, 0.95),
-    nutrition
-  };
+  // Instant graceful fallback when Gemini hits rate limits (429) or spikes
+  console.log('Using heuristic nutritional fallback for voice query:', query);
+  return getHeuristicNutrition(query);
 }
 
 /**

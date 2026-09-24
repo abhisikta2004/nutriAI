@@ -45,18 +45,18 @@ export async function safeFetchJson(url: string, retries: number = 1, delayMs: n
   throw lastError;
 }
 
-// Search Open Food Facts for products
+// Search Open Food Facts for products with fast 1.5s timeout
 export async function searchOpenFoodFacts(query: string): Promise<any[]> {
   try {
     const data = await safeFetchJson(
       `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&countries=India&json=1&page_size=8`,
-      1,
-      200,
-      3000
+      0,
+      100,
+      1500
     );
     return data.products || [];
   } catch (error) {
-    console.error(`Open Food Facts search error for "${query}":`, error);
+    console.warn(`Open Food Facts search skipped for "${query}":`, error);
     return [];
   }
 }
